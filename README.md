@@ -1,4 +1,4 @@
-# Uber Microservices Clone
+# Uber Microservices
 
 This project is a high-level microservices-based architecture for a ride-sharing application (Uber clone), designed for the **Software Design and Architectures (SWE 4602)** course.
 
