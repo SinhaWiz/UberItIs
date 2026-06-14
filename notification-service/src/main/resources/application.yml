@@ -1,0 +1,21 @@
+server:
+  port: 8085
+
+spring:
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
+  application:
+    name: notification-service
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+  mongodb:
+    uri: mongodb+srv://${MONGO_DB_USER}:${MONGO_DB_PASS}@cluster0.2s8gm.mongodb.net/?appName=cluster0
+    database: uber_notification_db
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/

@@ -1,0 +1,25 @@
+### Create a new user
+POST http://localhost:8081/api/users
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "phoneNumber": "+1234567890"
+}
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 201, "Response status is not 201");
+    });
+    client.global.set("userId", response.body.id);
+%}
+
+### Get user by ID (uses the ID generated from the previous request)
+GET http://localhost:8081/api/users/{{userId}}
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
