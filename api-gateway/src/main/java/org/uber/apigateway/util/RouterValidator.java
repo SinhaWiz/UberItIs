@@ -1,18 +1,17 @@
-package com.nas.gateway.config;
-
-
-import java.util.List;
-import java.util.function.Predicate;
+package org.uber.apigateway.util;
 
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.function.Predicate;
 
 @Component
 public class RouterValidator {
 
     public static final List<String> openApiEndpoints = List.of(
-            "/auth/v1/register",
-            "/auth/verifyIdToken"
+            "/api/users/register",
+            "/api/users/login"
     );
 
     public Predicate<ServerHttpRequest> isSecured =

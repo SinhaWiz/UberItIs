@@ -14,23 +14,23 @@ spring:
               lower-case-service-id: true
           routes:
             - id: user-service
-              uri: lb://user-service
+              uri: lb://USER-SERVICE
               predicates:
                 - Path=/api/users/**
             - id: ride-service
-              uri: lb://ride-service
+              uri: lb://RIDE-SERVICE
               predicates:
                 - Path=/api/rides/**
             - id: driver-service
-              uri: lb://driver-service
+              uri: lb://DRIVER-SERVICE
               predicates:
                 - Path=/api/drivers/**
             - id: payment-service
-              uri: lb://payment-service
+              uri: lb://PAYMENT-SERVICE
               predicates:
                 - Path=/api/payments/**
             - id: notification-service
-              uri: lb://notification-service
+              uri: lb://NOTIFICATION-SERVICE
               predicates:
                 - Path=/api/notifications/**
 
@@ -38,3 +38,7 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+
+token:
+  signing:
+    key: "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"

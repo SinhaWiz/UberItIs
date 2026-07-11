@@ -1,25 +1,159 @@
-### Create a new user
-POST http://localhost:8081/api/users
+### ===========================
+### User Service API Tests
+### ===========================
+
+### 1. Register a Rider
+POST http://localhost:8081/api/users/register
 Content-Type: application/json
 
 {
-  "name": "John Doe",
-  "email": "john.doe@example.com",
-  "phoneNumber": "+1234567890"
+  "name": "Alice Rahman",
+  "email": "alice@example.com",
+  "password": "securePass123",
+  "phone": "+8801711111111",
+  "role": "RIDER"
 }
 
 > {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 201, "Response status is not 201");
+    client.test("Registration successful", function() {
+        client.assert(response.status === 201, "Expected 201 Created");
     });
-    client.global.set("userId", response.body.id);
+    client.global.set("riderId", response.body.id);
 %}
 
-### Get user by ID (uses the ID generated from the previous request)
-GET http://localhost:8081/api/users/{{userId}}
+###
+
+### 2. Register a Driver
+POST http://localhost:8081/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Bob Karim",
+  "email": "bob@example.com",
+  "password": "driverPass456",
+  "phone": "+8801722222222",
+  "role": "DRIVER"
+}
 
 > {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
+    client.test("Driver registration successful", function() {
+        client.assert(response.status === 201, "Expected 201 Created");
+    });
+    client.global.set("driverId", response.body.id);
+%}
+
+###
+
+### 3. Register duplicate email (should fail with 409)
+POST http://localhost:8081/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Alice Duplicate",
+  "email": "alice@example.com",
+  "password": "anotherPass",
+  "phone": "+8801733333333",
+  "role": "RIDER"
+}
+
+> {%
+    client.test("Duplicate rejected", function() {
+        client.assert(response.status === 409, "Expected 409 Conflict");
+    });
+%}
+
+###
+
+### 4. Login with valid credentials
+POST http://localhost:8081/api/users/login
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "securePass123"
+}
+
+> {%
+    client.test("Login successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.token !== null, "Token should be present");
+    });
+%}
+
+###
+
+### 5. Login with wrong password (should fail with 400)
+POST http://localhost:8081/api/users/login
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "wrongPassword"
+}
+
+> {%
+    client.test("Invalid login rejected", function() {
+        client.assert(response.status === 400, "Expected 400 Bad Request");
+    });
+%}
+
+###
+
+### 6. Get user by ID (uses riderId from registration)
+GET http://localhost:8081/api/users/{{riderId}}
+
+> {%
+    client.test("Get user successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+%}
+
+###
+
+### 7. Update user profile
+PUT http://localhost:8081/api/users/{{riderId}}
+Content-Type: application/json
+
+{
+  "name": "Alice Rahman Updated",
+  "phone": "+8801744444444"
+}
+
+> {%
+    client.test("Update successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+%}
+
+###
+
+### 8. Get all users (admin endpoint)
+GET http://localhost:8081/api/users
+
+> {%
+    client.test("Get all users successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+%}
+
+###
+
+### 9. Get all riders
+GET http://localhost:8081/api/users/role/RIDER
+
+> {%
+    client.test("Get riders successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+%}
+
+###
+
+### 10. Get all drivers
+GET http://localhost:8081/api/users/role/DRIVER
+
+> {%
+    client.test("Get drivers successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
     });
 %}

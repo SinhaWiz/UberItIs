@@ -41,7 +41,9 @@ build/
 .DS_Store
 
 ### extras
+task.md
 .idea/runConfigurations/
+.idea/httpRequests/*
 *application-local.yml
 *application-local.properties
 .env
