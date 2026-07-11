@@ -41,6 +41,7 @@ build/
 .DS_Store
 
 ### extras
+task.md
 .idea/runConfigurations/
 *application-local.yml
 *application-local.properties

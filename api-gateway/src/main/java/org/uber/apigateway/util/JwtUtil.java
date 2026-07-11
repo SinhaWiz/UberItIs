@@ -1,4 +1,4 @@
-package com.nas.gateway.config;
+package org.uber.apigateway.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -10,17 +10,15 @@ import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Date;
 
-
-
 @Component
-public class TokenHandler {
+public class JwtUtil {
     @Value("${token.signing.key}")
     private String jwtSigningKey;
 
     private Key key;
 
     @PostConstruct
-    public void init(){
+    public void init() {
         this.key = Keys.hmacShaKeyFor(jwtSigningKey.getBytes());
     }
 
@@ -35,5 +33,4 @@ public class TokenHandler {
     public boolean isInvalid(String token) {
         return this.isTokenExpired(token);
     }
-
 }
