@@ -1,0 +1,114 @@
+### ===========================
+### API Gateway & User Service Tests
+### ===========================
+### Note: All requests hit the API Gateway on port 8080
+### The Gateway routes them to the User Service on port 8081
+### ===========================
+
+### 1. Register a Rider (Open Endpoint - No JWT required)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Alice Gateway",
+  "email": "alice.gateway@example.com",
+  "password": "securePass123",
+  "phone": "+8801755555555",
+  "role": "RIDER"
+}
+
+> {%
+    client.test("Registration successful", function() {
+        client.assert(response.status === 201 || response.status === 409, "Expected 201 Created or 409 if already exists");
+    });
+    if (response.status === 201) {
+        client.global.set("riderId", response.body.id);
+    }
+%}
+
+###
+
+### 2. Login (Open Endpoint - Generates JWT)
+POST http://localhost:8080/api/users/login
+Content-Type: application/json
+
+{
+  "email": "alice.gateway@example.com",
+  "password": "securePass123"
+}
+
+> {%
+    client.test("Login successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.token !== null, "Token should be present");
+    });
+    // Save the JWT token and user ID for subsequent secured requests!
+    client.global.set("authToken", response.body.token);
+    client.global.set("riderId", response.body.user.id);
+%}
+
+###
+
+### 3. Get user by ID (Secured Endpoint - Requires JWT)
+### The Gateway validates the token and injects X-Auth-User-Id header before forwarding
+GET http://localhost:8080/api/users/{{riderId}}
+Authorization: Bearer {{authToken}}
+
+> {%
+    client.test("Get user successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+%}
+
+###
+
+### 4. Try secured endpoint WITHOUT token (Should fail with 401 Unauthorized)
+GET http://localhost:8080/api/users/{{riderId}}
+
+> {%
+    client.test("Rejected without token", function() {
+        client.assert(response.status === 401, "Expected 401 Unauthorized");
+    });
+%}
+
+###
+
+### 5. Try secured endpoint WITH INVALID token (Should fail with 401 Unauthorized)
+GET http://localhost:8080/api/users/{{riderId}}
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.fakeclaims.fakesignature
+
+> {%
+    client.test("Rejected with fake token", function() {
+        client.assert(response.status === 401, "Expected 401 Unauthorized");
+    });
+%}
+
+###
+
+### 6. Update user profile (Secured Endpoint)
+PUT http://localhost:8080/api/users/{{riderId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Alice Gateway Updated",
+  "phone": "+8801799999999"
+}
+
+> {%
+    client.test("Update successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+%}
+
+###
+
+### 7. Get all users (Secured Endpoint)
+GET http://localhost:8080/api/users
+Authorization: Bearer {{authToken}}
+
+> {%
+    client.test("Get all users successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+%}

@@ -43,6 +43,7 @@ build/
 ### extras
 task.md
 .idea/runConfigurations/
+.idea/httpRequests/*
 *application-local.yml
 *application-local.properties
 .env
