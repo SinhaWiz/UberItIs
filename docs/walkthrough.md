@@ -32,3 +32,20 @@ Created a comprehensive High-Level Design (HLD) project report for a ride-sharin
 - Sequence Diagram: Ride Request & Driver Matching
 - Sequence Diagram: Ride Completion & Payment
 - Sequence Diagram: Notification Processing (Async)
+
+## Implementation Progress (Current Status)
+
+### Infrastructure Setup
+- **Eureka Server:** Registered on port `8761`. Added custom listener for connection logging.
+- **API Gateway:** Configured on port `8080`. Routes correctly set up for all services using WebFlux.
+
+### Business Services
+- **User Service (`8081`):** Fully implemented. Handles JWT authentication, registration, and user profiles. Uses MongoDB database `uber_user_db`.
+- **Driver Service (`8083`):** Fully implemented. Manages driver profiles, location, and availability. Communicates synchronously with User Service using a `@LoadBalanced` `RestTemplate`. Uses MongoDB database `uber_driver_db`.
+- **Ride Service (`8082`):** Skeleton created. Pending implementation.
+- **Payment Service (`8084`):** Skeleton created. Pending implementation.
+- **Notification Service (`8085`):** Skeleton created. Pending implementation.
+
+### Testing & Validation
+- Standardized IntelliJ HTTP Client files created in `./requests/`.
+- Both direct-service (`[service].http`) and gateway-routed (`[service]_api-gateway.http`) scripts exist and successfully pass all endpoints for User and Driver services.

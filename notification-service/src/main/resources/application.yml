@@ -11,11 +11,15 @@ spring:
     port: 5672
     username: guest
     password: guest
+  data:
+    mongodb:
+      uri: mongodb+srv://${MONGO_DB_USER}:${MONGO_DB_PASS}@cluster0.2s8gm.mongodb.net/uber_notification_db?appName=cluster0
   mongodb:
-    uri: mongodb+srv://${MONGO_DB_USER}:${MONGO_DB_PASS}@cluster0.2s8gm.mongodb.net/?appName=cluster0
-    database: uber_notification_db
+    uri: mongodb+srv://${MONGO_DB_USER}:${MONGO_DB_PASS}@cluster0.2s8gm.mongodb.net/uber_notification_db?appName=cluster0
 
 eureka:
+  instance:
+    prefer-ip-address: true
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/

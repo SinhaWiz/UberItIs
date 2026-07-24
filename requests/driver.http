@@ -1,0 +1,217 @@
+### =============================
+### Driver Service API Tests
+### =============================
+### Prerequisite: user-service must be running on port 8081.
+### Run these requests sequentially from top to bottom.
+
+### 1. Register a Driver user (via User Service)
+POST http://localhost:8081/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Bob Karim",
+  "email": "bob@example.com",
+  "password": "driverPass456",
+  "phone": "+8801722222222",
+  "role": "DRIVER"
+}
+
+> {%
+    client.test("Driver user registration successful", function() {
+        client.assert(response.status === 201, "Expected 201 Created");
+    });
+    client.global.set("driverUserId", response.body.id);
+%}
+
+### 2. Register a Rider user (for validation tests)
+POST http://localhost:8081/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Alice Rahman",
+  "email": "alice_test@example.com",
+  "password": "securePass123",
+  "phone": "+8801711111111",
+  "role": "RIDER"
+}
+
+> {%
+    client.test("Rider user registration successful", function() {
+        client.assert(response.status === 201, "Expected 201 Created");
+    });
+    client.global.set("riderUserId", response.body.id);
+%}
+
+### 3. Create a driver profile for the registered driver user
+POST http://localhost:8083/api/drivers/profile
+Content-Type: application/json
+
+{
+  "userId": "{{driverUserId}}",
+  "vehicleModel": "Toyota Axio",
+  "vehiclePlate": "DHA-1234",
+  "vehicleColor": "White"
+}
+
+> {%
+    client.test("Driver profile created", function() {
+        client.assert(response.status === 201, "Expected 201 Created");
+        client.assert(response.body.userId === client.global.get("driverUserId"), "userId should match");
+    });
+    client.global.set("driverProfileId", response.body.id);
+%}
+
+### 4. Try creating duplicate profile (should fail with 409)
+POST http://localhost:8083/api/drivers/profile
+Content-Type: application/json
+
+{
+  "userId": "{{driverUserId}}",
+  "vehicleModel": "Honda Civic",
+  "vehiclePlate": "DHA-5678",
+  "vehicleColor": "Black"
+}
+
+> {%
+    client.test("Duplicate profile rejected", function() {
+        client.assert(response.status === 409, "Expected 409 Conflict");
+    });
+%}
+
+### 5. Try creating profile with non-existent userId (should fail with 404)
+POST http://localhost:8083/api/drivers/profile
+Content-Type: application/json
+
+{
+  "userId": "000000000000000000000000",
+  "vehicleModel": "Nissan Sunny",
+  "vehiclePlate": "DHA-9012",
+  "vehicleColor": "Blue"
+}
+
+> {%
+    client.test("Invalid userId rejected", function() {
+        client.assert(response.status === 404, "Expected 404 Not Found");
+    });
+%}
+
+### 6. Get driver profile by userId
+GET http://localhost:8083/api/drivers/{{driverUserId}}
+
+> {%
+    client.test("Get profile successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.vehicleModel === "Toyota Axio", "Vehicle model should match");
+    });
+%}
+
+### 7. Update driver profile vehicle info
+PUT http://localhost:8083/api/drivers/{{driverUserId}}
+Content-Type: application/json
+
+{
+  "vehicleColor": "Silver",
+  "vehiclePlate": "DHA-4321"
+}
+
+> {%
+    client.test("Update profile successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.vehicleColor === "Silver", "Color should be updated");
+    });
+%}
+
+### 8. Toggle availability to offline
+PUT http://localhost:8083/api/drivers/{{driverUserId}}/availability
+Content-Type: application/json
+
+{
+  "isAvailable": false
+}
+
+> {%
+    client.test("Availability toggled to offline", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.isAvailable === false, "Should be unavailable");
+    });
+%}
+
+### 9. Get available drivers (should be empty after toggle)
+GET http://localhost:8083/api/drivers/available
+
+> {%
+    client.test("No available drivers", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length === 0, "Should be empty");
+    });
+%}
+
+### 10. Toggle availability back to online
+PUT http://localhost:8083/api/drivers/{{driverUserId}}/availability
+Content-Type: application/json
+
+{
+  "isAvailable": true
+}
+
+> {%
+    client.test("Availability toggled to online", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.isAvailable === true, "Should be available");
+    });
+%}
+
+### 11. Update driver location
+PUT http://localhost:8083/api/drivers/{{driverUserId}}/location
+Content-Type: application/json
+
+{
+  "latitude": 23.777176,
+  "longitude": 90.399452
+}
+
+> {%
+    client.test("Location updated", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.currentLatitude === 23.777176, "Latitude should match");
+    });
+%}
+
+### 12. Get all available drivers (should include our driver)
+GET http://localhost:8083/api/drivers/available
+
+> {%
+    client.test("Available drivers found", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length > 0, "Should have available drivers");
+    });
+%}
+
+### 13. Get nearby drivers within 5km of the driver's location
+GET http://localhost:8083/api/drivers/nearby?lat=23.777176&lng=90.399452&radius=5
+
+> {%
+    client.test("Nearby drivers found", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length > 0, "Should find nearby drivers");
+    });
+%}
+
+### 14. Get nearby drivers far away (should be empty)
+GET http://localhost:8083/api/drivers/nearby?lat=40.712776&lng=-74.005974&radius=1
+
+> {%
+    client.test("No nearby drivers far away", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length === 0, "Should be empty");
+    });
+%}
+
+### 15. Get non-existent profile (should fail with 404)
+GET http://localhost:8083/api/drivers/nonexistentUserId
+
+> {%
+    client.test("Non-existent profile returns 404", function() {
+        client.assert(response.status === 404, "Expected 404 Not Found");
+    });
+%}

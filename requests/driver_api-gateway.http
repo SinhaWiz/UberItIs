@@ -1,0 +1,280 @@
+### =============================
+### Driver Service API Gateway Tests
+### =============================
+### Prerequisite: API Gateway (8080) must be running, which routes to user-service and driver-service.
+### Run these requests sequentially from top to bottom.
+
+### 1. Register a Driver user (via Gateway)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Bob Gateway Driver",
+  "email": "bob.gw@example.com",
+  "password": "driverPass456",
+  "phone": "+8801733333333",
+  "role": "DRIVER"
+}
+
+> {%
+    client.test("Driver user registration successful", function() {
+        client.assert(response.status === 201 || response.status === 409, "Expected 201 Created or 409 Conflict");
+    });
+    if (response.status === 201) {
+        client.global.set("driverUserId", response.body.id);
+    }
+%}
+
+###
+
+### 2. Login as the Driver to get token (via Gateway)
+POST http://localhost:8080/api/users/login
+Content-Type: application/json
+
+{
+  "email": "bob.gw@example.com",
+  "password": "driverPass456"
+}
+
+> {%
+    client.test("Login successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.token !== null, "Token should be present");
+    });
+    client.global.set("driverAuthToken", response.body.token);
+    client.global.set("driverUserId", response.body.user.id);
+%}
+
+###
+
+### 3. Register a Rider user (for validation tests, via Gateway)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Alice GW Rider",
+  "email": "alice_gw_test@example.com",
+  "password": "securePass123",
+  "phone": "+8801744444444",
+  "role": "RIDER"
+}
+
+> {%
+    client.test("Rider user registration successful", function() {
+        client.assert(response.status === 201 || response.status === 409, "Expected 201 Created or 409 Conflict");
+    });
+%}
+
+###
+
+### 4. Create a driver profile for the registered driver user (via Gateway)
+POST http://localhost:8080/api/drivers/profile
+Authorization: Bearer {{driverAuthToken}}
+Content-Type: application/json
+
+{
+  "userId": "{{driverUserId}}",
+  "vehicleModel": "Toyota Axio",
+  "vehiclePlate": "DHA-GW-1234",
+  "vehicleColor": "White"
+}
+
+> {%
+    client.test("Driver profile created", function() {
+        client.assert(response.status === 201 || response.status === 409, "Expected 201 Created or 409 Conflict");
+    });
+    if (response.status === 201) {
+        client.global.set("driverProfileId", response.body.id);
+    }
+%}
+
+###
+
+### 5. Try creating duplicate profile (should fail with 409, via Gateway)
+POST http://localhost:8080/api/drivers/profile
+Authorization: Bearer {{driverAuthToken}}
+Content-Type: application/json
+
+{
+  "userId": "{{driverUserId}}",
+  "vehicleModel": "Honda Civic",
+  "vehiclePlate": "DHA-5678",
+  "vehicleColor": "Black"
+}
+
+> {%
+    client.test("Duplicate profile rejected", function() {
+        client.assert(response.status === 409, "Expected 409 Conflict");
+    });
+%}
+
+###
+
+### 6. Try creating profile with non-existent userId (should fail with 404, via Gateway)
+POST http://localhost:8080/api/drivers/profile
+Authorization: Bearer {{driverAuthToken}}
+Content-Type: application/json
+
+{
+  "userId": "000000000000000000000000",
+  "vehicleModel": "Nissan Sunny",
+  "vehiclePlate": "DHA-9012",
+  "vehicleColor": "Blue"
+}
+
+> {%
+    client.test("Invalid userId rejected", function() {
+        client.assert(response.status === 404, "Expected 404 Not Found");
+    });
+%}
+
+###
+
+### 7. Get driver profile by userId (via Gateway)
+GET http://localhost:8080/api/drivers/{{driverUserId}}
+Authorization: Bearer {{driverAuthToken}}
+
+> {%
+    client.test("Get profile successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.vehicleModel === "Toyota Axio", "Vehicle model should match");
+    });
+%}
+
+###
+
+### 8. Update driver profile vehicle info (via Gateway)
+PUT http://localhost:8080/api/drivers/{{driverUserId}}
+Authorization: Bearer {{driverAuthToken}}
+Content-Type: application/json
+
+{
+  "vehicleColor": "Silver",
+  "vehiclePlate": "DHA-4321"
+}
+
+> {%
+    client.test("Update profile successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.vehicleColor === "Silver", "Color should be updated");
+    });
+%}
+
+###
+
+### 9. Toggle availability to offline (via Gateway)
+PUT http://localhost:8080/api/drivers/{{driverUserId}}/availability
+Authorization: Bearer {{driverAuthToken}}
+Content-Type: application/json
+
+{
+  "isAvailable": false
+}
+
+> {%
+    client.test("Availability toggled to offline", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.isAvailable === false, "Should be unavailable");
+    });
+%}
+
+###
+
+### 10. Get available drivers (should be empty after toggle, via Gateway)
+GET http://localhost:8080/api/drivers/available
+Authorization: Bearer {{driverAuthToken}}
+
+> {%
+    client.test("No available drivers", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length === 0, "Should be empty");
+    });
+%}
+
+###
+
+### 11. Toggle availability back to online (via Gateway)
+PUT http://localhost:8080/api/drivers/{{driverUserId}}/availability
+Authorization: Bearer {{driverAuthToken}}
+Content-Type: application/json
+
+{
+  "isAvailable": true
+}
+
+> {%
+    client.test("Availability toggled to online", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.isAvailable === true, "Should be available");
+    });
+%}
+
+###
+
+### 12. Update driver location (via Gateway)
+PUT http://localhost:8080/api/drivers/{{driverUserId}}/location
+Authorization: Bearer {{driverAuthToken}}
+Content-Type: application/json
+
+{
+  "latitude": 23.777176,
+  "longitude": 90.399452
+}
+
+> {%
+    client.test("Location updated", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.currentLatitude === 23.777176, "Latitude should match");
+    });
+%}
+
+###
+
+### 13. Get all available drivers (should include our driver, via Gateway)
+GET http://localhost:8080/api/drivers/available
+Authorization: Bearer {{driverAuthToken}}
+
+> {%
+    client.test("Available drivers found", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length > 0, "Should have available drivers");
+    });
+%}
+
+###
+
+### 14. Get nearby drivers within 5km of the driver's location (via Gateway)
+GET http://localhost:8080/api/drivers/nearby?lat=23.777176&lng=90.399452&radius=5
+Authorization: Bearer {{driverAuthToken}}
+
+> {%
+    client.test("Nearby drivers found", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length > 0, "Should find nearby drivers");
+    });
+%}
+
+###
+
+### 15. Get nearby drivers far away (should be empty, via Gateway)
+GET http://localhost:8080/api/drivers/nearby?lat=40.712776&lng=-74.005974&radius=1
+Authorization: Bearer {{driverAuthToken}}
+
+> {%
+    client.test("No nearby drivers far away", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length === 0, "Should be empty");
+    });
+%}
+
+###
+
+### 16. Get non-existent profile (should fail with 404, via Gateway)
+GET http://localhost:8080/api/drivers/nonexistentUserId
+Authorization: Bearer {{driverAuthToken}}
+
+> {%
+    client.test("Non-existent profile returns 404", function() {
+        client.assert(response.status === 404, "Expected 404 Not Found");
+    });
+%}

@@ -1,5 +1,5 @@
 ### ===========================
-### API Gateway & User Service Tests
+### User Service API Gateway Tests
 ### ===========================
 ### Note: All requests hit the API Gateway on port 8080
 ### The Gateway routes them to the User Service on port 8081

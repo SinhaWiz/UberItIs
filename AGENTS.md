@@ -172,3 +172,29 @@ Real credentials are stored in `.env` at the project root (git-ignored). The `.e
 | Payment Service | 8084 |
 | Notification Service | 8085 |
 
+### 4.5 MongoDB Configuration Gotchas
+When configuring MongoDB URIs in this project, **always provide both** `spring.data.mongodb.uri` and `spring.mongodb.uri` in the `application.yml` file to bypass auto-configuration prefix conflicts. Furthermore, **do not** use a separate `database:` property if using an SRV URI (`mongodb+srv://`). Instead, append the database name directly to the URI string (e.g., `...mongodb.net/uber_user_db?appName=cluster0`). Failure to do so will cause the driver to silently ignore the configuration and fall back to `localhost:27017`.
+
+### 4.6 Eureka DNS and API Gateway Routing
+When registering services with Eureka for the API Gateway to route to, you **must** set `eureka.instance.prefer-ip-address: true` in the `application.yml` of all services and the gateway. By default, Eureka registers services using the machine's local hostname (e.g., `Boomer.mshome.net`), which the API Gateway's internal DNS resolver will fail to resolve, resulting in an `UnknownHostException` (HTTP 500) during routing.
+
+### 4.7 RestTemplate and LoadBalancing
+Since Spring Cloud 2020.0 (which removed Netflix Ribbon), adding `@LoadBalanced` to a `RestTemplate` bean is **not enough** on its own. You **must** explicitly include the `spring-cloud-starter-loadbalancer` dependency in the service's `pom.xml`. If this dependency is missing, the code will fail to compile, or the `RestTemplate` will attempt to resolve Eureka service IDs via standard DNS, resulting in `UnknownHostException`s during inter-service communication.
+
+### 4.8 Local Maven Wrapper Setup
+Because this project does not commit the Maven wrapper to Git (the `.mvn` directory is ignored to avoid OS-specific script conflicts), agents must set it up locally if `mvn` is unavailable on the terminal.
+
+To set up the wrapper inside the `.mvn` directory, agents should run the following commands based on the OS platform:
+**Windows (PowerShell):**
+```powershell
+Invoke-WebRequest -Uri "https://start.spring.io/starter.zip?type=maven-project&javaVersion=17" -OutFile "spring.zip"; Expand-Archive -Path "spring.zip" -DestinationPath "spring_tmp" -Force; Copy-Item -Path "spring_tmp\mvnw" -Destination ".mvn" -Force; Copy-Item -Path "spring_tmp\mvnw.cmd" -Destination ".mvn" -Force; Copy-Item -Path "spring_tmp\.mvn\*" -Destination ".mvn" -Recurse -Force; Remove-Item -Path "spring.zip" -Force; Remove-Item -Path "spring_tmp" -Recurse -Force
+```
+
+**macOS / Linux (Bash):**
+```bash
+curl -sL https://start.spring.io/starter.zip?type=maven-project\&javaVersion=17 -o spring.zip && unzip -q spring.zip -d spring_tmp && mkdir -p .mvn && cp spring_tmp/mvnw .mvn/ && cp spring_tmp/mvnw.cmd .mvn/ && cp -r spring_tmp/.mvn/* .mvn/ && rm -rf spring.zip spring_tmp && chmod +x .mvn/mvnw
+```
+
+When compiling, agents **must** use the scripts from within the `.mvn` directory:
+- **Windows:** `.\.mvn\mvnw.cmd clean compile`
+- **macOS/Linux:** `./.mvn/mvnw clean compile`
