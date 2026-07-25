@@ -11,9 +11,6 @@ spring:
     port: 5672
     username: guest
     password: guest
-  data:
-    mongodb:
-      uri: mongodb+srv://${MONGO_DB_USER}:${MONGO_DB_PASS}@cluster0.2s8gm.mongodb.net/uber_payment_db?appName=cluster0
   mongodb:
     uri: mongodb+srv://${MONGO_DB_USER}:${MONGO_DB_PASS}@cluster0.2s8gm.mongodb.net/uber_payment_db?appName=cluster0
 

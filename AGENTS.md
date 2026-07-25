@@ -129,7 +129,7 @@ To compile only your specific service:
 mvn clean compile -pl <service-name>
 ```
 
-> **Note:** The exact `mvn` command path varies by platform and IDE installation. On some setups, Maven is only available through IntelliJ's bundled path (check `.mvn/` or the IDE's Maven settings). Do not assume `mvn` is available as a raw terminal command.
+> **Note:** The exact `mvn` command path varies by platform and IDE installation. On some setups, Maven is only available through IntelliJ's bundled path (check `.mvn/` or the IDE's Maven settings). Do not assume `mvn` is available as a raw terminal command. It may or may not be available as direct terminal command, check.
 
 If the build succeeds, you're done. If it fails, **read the error carefully** — common issues:
 - Missing imports (forgot to add a dependency to `pom.xml`)
@@ -181,20 +181,3 @@ When registering services with Eureka for the API Gateway to route to, you **mus
 ### 4.7 RestTemplate and LoadBalancing
 Since Spring Cloud 2020.0 (which removed Netflix Ribbon), adding `@LoadBalanced` to a `RestTemplate` bean is **not enough** on its own. You **must** explicitly include the `spring-cloud-starter-loadbalancer` dependency in the service's `pom.xml`. If this dependency is missing, the code will fail to compile, or the `RestTemplate` will attempt to resolve Eureka service IDs via standard DNS, resulting in `UnknownHostException`s during inter-service communication.
 
-### 4.8 Local Maven Wrapper Setup
-Because this project does not commit the Maven wrapper to Git (the `.mvn` directory is ignored to avoid OS-specific script conflicts), agents must set it up locally if `mvn` is unavailable on the terminal.
-
-To set up the wrapper inside the `.mvn` directory, agents should run the following commands based on the OS platform:
-**Windows (PowerShell):**
-```powershell
-Invoke-WebRequest -Uri "https://start.spring.io/starter.zip?type=maven-project&javaVersion=17" -OutFile "spring.zip"; Expand-Archive -Path "spring.zip" -DestinationPath "spring_tmp" -Force; Copy-Item -Path "spring_tmp\mvnw" -Destination ".mvn" -Force; Copy-Item -Path "spring_tmp\mvnw.cmd" -Destination ".mvn" -Force; Copy-Item -Path "spring_tmp\.mvn\*" -Destination ".mvn" -Recurse -Force; Remove-Item -Path "spring.zip" -Force; Remove-Item -Path "spring_tmp" -Recurse -Force
-```
-
-**macOS / Linux (Bash):**
-```bash
-curl -sL https://start.spring.io/starter.zip?type=maven-project\&javaVersion=17 -o spring.zip && unzip -q spring.zip -d spring_tmp && mkdir -p .mvn && cp spring_tmp/mvnw .mvn/ && cp spring_tmp/mvnw.cmd .mvn/ && cp -r spring_tmp/.mvn/* .mvn/ && rm -rf spring.zip spring_tmp && chmod +x .mvn/mvnw
-```
-
-When compiling, agents **must** use the scripts from within the `.mvn` directory:
-- **Windows:** `.\.mvn\mvnw.cmd clean compile`
-- **macOS/Linux:** `./.mvn/mvnw clean compile`
