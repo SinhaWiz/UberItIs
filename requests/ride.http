@@ -1,0 +1,318 @@
+### =============================
+### Ride Service API Tests
+### =============================
+### Prerequisite: user-service (8081) and driver-service (8083) must be running.
+### Run these requests sequentially from top to bottom.
+
+### 1. Register a Rider user (via User Service)
+POST http://localhost:8081/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Alice Rahman",
+  "email": "alice_ride@example.com",
+  "password": "securePass123",
+  "phone": "+8801711111111",
+  "role": "RIDER"
+}
+
+> {%
+    client.test("Rider user registration successful", function() {
+        client.assert(response.status === 201, "Expected 201 Created");
+    });
+    client.global.set("riderId", response.body.id);
+%}
+
+###
+
+### 2. Register a Driver user (via User Service)
+POST http://localhost:8081/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Bob Karim",
+  "email": "bob_ride@example.com",
+  "password": "driverPass456",
+  "phone": "+8801722222222",
+  "role": "DRIVER"
+}
+
+> {%
+    client.test("Driver user registration successful", function() {
+        client.assert(response.status === 201, "Expected 201 Created");
+    });
+    client.global.set("driverUserId", response.body.id);
+%}
+
+###
+
+### 3. Create a driver profile for the registered driver user (via Driver Service)
+POST http://localhost:8083/api/drivers/profile
+Content-Type: application/json
+
+{
+  "userId": "{{driverUserId}}",
+  "vehicleModel": "Toyota Axio",
+  "vehiclePlate": "DHA-1234",
+  "vehicleColor": "White"
+}
+
+> {%
+    client.test("Driver profile created", function() {
+        client.assert(response.status === 201, "Expected 201 Created");
+        client.assert(response.body.isAvailable === true, "Driver should start available");
+    });
+%}
+
+###
+
+### 4. Request a ride (should fail with 404 for unknown rider)
+POST http://localhost:8082/api/rides/request
+Content-Type: application/json
+
+{
+  "riderId": "000000000000000000000000",
+  "pickupLocation": "Gulshan 1",
+  "dropoffLocation": "Banani"
+}
+
+> {%
+    client.test("Unknown rider rejected", function() {
+        client.assert(response.status === 404, "Expected 404 Not Found");
+    });
+%}
+
+###
+
+### 5. Request a ride for the registered rider
+POST http://localhost:8082/api/rides/request
+Content-Type: application/json
+
+{
+  "riderId": "{{riderId}}",
+  "pickupLocation": "Gulshan 1",
+  "dropoffLocation": "Banani"
+}
+
+> {%
+    client.test("Ride requested", function() {
+        client.assert(response.status === 201, "Expected 201 Created");
+        client.assert(response.body.status === "REQUESTED", "Status should be REQUESTED");
+    });
+    client.global.set("rideId", response.body.id);
+%}
+
+###
+
+### 6. Get ride by id
+GET http://localhost:8082/api/rides/{{rideId}}
+
+> {%
+    client.test("Get ride successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.pickupLocation === "Gulshan 1", "Pickup location should match");
+    });
+%}
+
+###
+
+### 7. Try to start the ride before it's matched (should fail with 409)
+PUT http://localhost:8082/api/rides/{{rideId}}/start
+
+> {%
+    client.test("Cannot start unmatched ride", function() {
+        client.assert(response.status === 409, "Expected 409 Conflict");
+    });
+%}
+
+###
+
+### 8. Match a driver to the ride
+PUT http://localhost:8082/api/rides/{{rideId}}/match
+Content-Type: application/json
+
+{}
+
+> {%
+    client.test("Ride matched", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.status === "MATCHED", "Status should be MATCHED");
+        client.assert(response.body.driverId === client.global.get("driverUserId"), "Driver should be assigned");
+    });
+%}
+
+###
+
+### 9. Try to match the ride again (should fail with 409, already matched)
+PUT http://localhost:8082/api/rides/{{rideId}}/match
+Content-Type: application/json
+
+{}
+
+> {%
+    client.test("Cannot re-match an already-matched ride", function() {
+        client.assert(response.status === 409, "Expected 409 Conflict");
+    });
+%}
+
+###
+
+### 10. Confirm the matched driver is no longer available (via Driver Service)
+GET http://localhost:8083/api/drivers/available
+
+> {%
+    client.test("Matched driver removed from available list", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length === 0, "Should be empty after match");
+    });
+%}
+
+###
+
+### 11. Start the ride
+PUT http://localhost:8082/api/rides/{{rideId}}/start
+
+> {%
+    client.test("Ride started", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.status === "IN_PROGRESS", "Status should be IN_PROGRESS");
+    });
+%}
+
+###
+
+### 12. Try to complete a ride that isn't started yet (should fail with 409, using a fresh REQUESTED ride)
+POST http://localhost:8082/api/rides/request
+Content-Type: application/json
+
+{
+  "riderId": "{{riderId}}",
+  "pickupLocation": "Dhanmondi 27",
+  "dropoffLocation": "Mohammadpur"
+}
+
+> {%
+    client.test("Second ride requested", function() {
+        client.assert(response.status === 201, "Expected 201 Created");
+    });
+    client.global.set("secondRideId", response.body.id);
+%}
+
+###
+
+### 13. Attempt to complete the still-REQUESTED second ride (should fail with 409)
+PUT http://localhost:8082/api/rides/{{secondRideId}}/complete
+
+> {%
+    client.test("Cannot complete a REQUESTED ride", function() {
+        client.assert(response.status === 409, "Expected 409 Conflict");
+    });
+%}
+
+###
+
+### 14. Complete the first ride (which is IN_PROGRESS)
+PUT http://localhost:8082/api/rides/{{rideId}}/complete
+
+> {%
+    client.test("Ride completed", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.status === "COMPLETED", "Status should be COMPLETED");
+        client.assert(response.body.finalFare !== null, "Final fare should be set");
+    });
+%}
+
+###
+
+### 15. Confirm the driver is available again after ride completion (via Driver Service)
+GET http://localhost:8083/api/drivers/available
+
+> {%
+    client.test("Driver available again after completion", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length > 0, "Should have an available driver again");
+    });
+%}
+
+###
+
+### 16. Get ride history for the rider
+GET http://localhost:8082/api/rides/rider/{{riderId}}
+
+> {%
+    client.test("Rider ride history returned", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length === 2, "Rider should have 2 rides");
+    });
+%}
+
+###
+
+### 17. Get ride history for the driver
+GET http://localhost:8082/api/rides/driver/{{driverUserId}}
+
+> {%
+    client.test("Driver ride history returned", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length === 1, "Driver should have 1 completed ride");
+    });
+%}
+
+###
+
+### 18. Get active rides (should include only the still-REQUESTED second ride)
+GET http://localhost:8082/api/rides/active
+
+> {%
+    client.test("Active rides excludes the completed ride", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length === 1, "Only the second ride should be active");
+        client.assert(response.body[0].id === client.global.get("secondRideId"), "Active ride should be the second ride");
+    });
+%}
+
+###
+
+### 19. Cancel the second (still-REQUESTED) ride
+PUT http://localhost:8082/api/rides/{{secondRideId}}/cancel
+
+> {%
+    client.test("Ride cancelled", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.status === "CANCELLED", "Status should be CANCELLED");
+    });
+%}
+
+###
+
+### 20. Try to cancel an already-cancelled ride (should fail with 409)
+PUT http://localhost:8082/api/rides/{{secondRideId}}/cancel
+
+> {%
+    client.test("Cannot cancel an already-cancelled ride", function() {
+        client.assert(response.status === 409, "Expected 409 Conflict");
+    });
+%}
+
+###
+
+### 21. Get active rides (should now be empty)
+GET http://localhost:8082/api/rides/active
+
+> {%
+    client.test("No active rides remain", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length === 0, "Should be empty");
+    });
+%}
+
+###
+
+### 22. Get a non-existent ride (should fail with 404)
+GET http://localhost:8082/api/rides/000000000000000000000000
+
+> {%
+    client.test("Non-existent ride returns 404", function() {
+        client.assert(response.status === 404, "Expected 404 Not Found");
+    });
+%}

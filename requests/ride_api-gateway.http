@@ -1,0 +1,252 @@
+### =============================
+### Ride Service API Gateway Tests
+### =============================
+### Prerequisite: API Gateway (8080) must be running, which routes to user-service,
+### driver-service, and ride-service.
+### Run these requests sequentially from top to bottom.
+
+### 1. Register a Rider user (via Gateway)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Alice GW Rider",
+  "email": "alice_gw_ride@example.com",
+  "password": "securePass123",
+  "phone": "+8801755555555",
+  "role": "RIDER"
+}
+
+> {%
+    client.test("Rider user registration successful", function() {
+        client.assert(response.status === 201 || response.status === 409, "Expected 201 Created or 409 Conflict");
+    });
+%}
+
+###
+
+### 2. Login as the Rider to get token (via Gateway)
+POST http://localhost:8080/api/users/login
+Content-Type: application/json
+
+{
+  "email": "alice_gw_ride@example.com",
+  "password": "securePass123"
+}
+
+> {%
+    client.test("Rider login successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.token !== null, "Token should be present");
+    });
+    client.global.set("riderAuthToken", response.body.token);
+    client.global.set("riderId", response.body.user.id);
+%}
+
+###
+
+### 3. Register a Driver user (via Gateway)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Bob GW Driver",
+  "email": "bob_gw_ride@example.com",
+  "password": "driverPass456",
+  "phone": "+8801766666666",
+  "role": "DRIVER"
+}
+
+> {%
+    client.test("Driver user registration successful", function() {
+        client.assert(response.status === 201 || response.status === 409, "Expected 201 Created or 409 Conflict");
+    });
+%}
+
+###
+
+### 4. Login as the Driver to get token (via Gateway)
+POST http://localhost:8080/api/users/login
+Content-Type: application/json
+
+{
+  "email": "bob_gw_ride@example.com",
+  "password": "driverPass456"
+}
+
+> {%
+    client.test("Driver login successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.token !== null, "Token should be present");
+    });
+    client.global.set("driverAuthToken", response.body.token);
+    client.global.set("driverUserId", response.body.user.id);
+%}
+
+###
+
+### 5. Create a driver profile for the registered driver user (via Gateway)
+POST http://localhost:8080/api/drivers/profile
+Authorization: Bearer {{driverAuthToken}}
+Content-Type: application/json
+
+{
+  "userId": "{{driverUserId}}",
+  "vehicleModel": "Toyota Axio",
+  "vehiclePlate": "DHA-GW-9999",
+  "vehicleColor": "White"
+}
+
+> {%
+    client.test("Driver profile created", function() {
+        client.assert(response.status === 201 || response.status === 409, "Expected 201 Created or 409 Conflict");
+    });
+%}
+
+###
+
+### 6. Request a ride (via Gateway)
+POST http://localhost:8080/api/rides/request
+Authorization: Bearer {{riderAuthToken}}
+Content-Type: application/json
+
+{
+  "riderId": "{{riderId}}",
+  "pickupLocation": "Gulshan 1",
+  "dropoffLocation": "Banani"
+}
+
+> {%
+    client.test("Ride requested", function() {
+        client.assert(response.status === 201, "Expected 201 Created");
+        client.assert(response.body.status === "REQUESTED", "Status should be REQUESTED");
+    });
+    client.global.set("rideId", response.body.id);
+%}
+
+###
+
+### 7. Get ride by id (via Gateway)
+GET http://localhost:8080/api/rides/{{rideId}}
+Authorization: Bearer {{riderAuthToken}}
+
+> {%
+    client.test("Get ride successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+%}
+
+###
+
+### 8. Match a driver to the ride (via Gateway)
+PUT http://localhost:8080/api/rides/{{rideId}}/match
+Authorization: Bearer {{riderAuthToken}}
+Content-Type: application/json
+
+{}
+
+> {%
+    client.test("Ride matched", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.status === "MATCHED", "Status should be MATCHED");
+    });
+%}
+
+###
+
+### 9. Try to match the ride again (should fail with 409, via Gateway)
+PUT http://localhost:8080/api/rides/{{rideId}}/match
+Authorization: Bearer {{riderAuthToken}}
+Content-Type: application/json
+
+{}
+
+> {%
+    client.test("Cannot re-match an already-matched ride", function() {
+        client.assert(response.status === 409, "Expected 409 Conflict");
+    });
+%}
+
+###
+
+### 10. Start the ride (via Gateway)
+PUT http://localhost:8080/api/rides/{{rideId}}/start
+Authorization: Bearer {{driverAuthToken}}
+
+> {%
+    client.test("Ride started", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.status === "IN_PROGRESS", "Status should be IN_PROGRESS");
+    });
+%}
+
+###
+
+### 11. Complete the ride (via Gateway)
+PUT http://localhost:8080/api/rides/{{rideId}}/complete
+Authorization: Bearer {{driverAuthToken}}
+
+> {%
+    client.test("Ride completed", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.status === "COMPLETED", "Status should be COMPLETED");
+        client.assert(response.body.finalFare !== null, "Final fare should be set");
+    });
+%}
+
+###
+
+### 12. Get ride history for the rider (via Gateway)
+GET http://localhost:8080/api/rides/rider/{{riderId}}
+Authorization: Bearer {{riderAuthToken}}
+
+> {%
+    client.test("Rider ride history returned", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length > 0, "Rider should have at least 1 ride");
+    });
+%}
+
+###
+
+### 13. Get active rides (via Gateway, should not include the completed ride)
+GET http://localhost:8080/api/rides/active
+Authorization: Bearer {{riderAuthToken}}
+
+> {%
+    client.test("Active rides excludes the completed ride", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        const ids = response.body.map(r => r.id);
+        client.assert(!ids.includes(client.global.get("rideId")), "Completed ride should not be active");
+    });
+%}
+
+###
+
+### 14. Get a non-existent ride (should fail with 404, via Gateway)
+GET http://localhost:8080/api/rides/000000000000000000000000
+Authorization: Bearer {{riderAuthToken}}
+
+> {%
+    client.test("Non-existent ride returns 404", function() {
+        client.assert(response.status === 404, "Expected 404 Not Found");
+    });
+%}
+
+###
+
+### 15. Attempt a ride request without a token (should fail, gateway auth filter blocks it)
+POST http://localhost:8080/api/rides/request
+Content-Type: application/json
+
+{
+  "riderId": "{{riderId}}",
+  "pickupLocation": "Uttara",
+  "dropoffLocation": "Airport"
+}
+
+> {%
+    client.test("Unauthenticated request rejected", function() {
+        client.assert(response.status === 401 || response.status === 403, "Expected 401 or 403");
+    });
+%}
