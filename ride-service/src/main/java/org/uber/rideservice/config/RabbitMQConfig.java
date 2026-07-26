@@ -1,0 +1,47 @@
+package org.uber.rideservice.config;
+
+import org.springframework.amqp.core.Binding;
+import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class RabbitMQConfig {
+
+    public static final String EXCHANGE = "uber.exchange";
+    public static final String RIDE_STATUS_QUEUE = "ride.status.queue";
+    public static final String RIDE_STATUS_ROUTING_KEY = "ride.status.changed";
+
+    @Bean
+    public TopicExchange uberExchange() {
+        return new TopicExchange(EXCHANGE);
+    }
+
+    @Bean
+    public Queue rideStatusQueue() {
+        return new Queue(RIDE_STATUS_QUEUE);
+    }
+
+    @Bean
+    public Binding rideStatusBinding(Queue rideStatusQueue, TopicExchange uberExchange) {
+        return BindingBuilder.bind(rideStatusQueue).to(uberExchange).with(RIDE_STATUS_ROUTING_KEY);
+    }
+
+    @Bean
+    public MessageConverter jsonMessageConverter() {
+        return new JacksonJsonMessageConverter();
+    }
+
+    @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory, MessageConverter jsonMessageConverter) {
+        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
+        rabbitTemplate.setMessageConverter(jsonMessageConverter);
+        return rabbitTemplate;
+    }
+}
