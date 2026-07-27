@@ -129,7 +129,7 @@ To compile only your specific service:
 mvn clean compile -pl <service-name>
 ```
 
-> **Note:** The exact `mvn` command path varies by platform and IDE installation. On some setups, Maven is only available through IntelliJ's bundled path (check `.mvn/` or the IDE's Maven settings). Do not assume `mvn` is available as a raw terminal command. It may or may not be available as direct terminal command, check.
+> **Note:** The exact `mvn` command path varies by platform and IDE installation. On some setups, Maven is only available through IntelliJ's bundled path (check `.mvn/` or the IDE's Maven settings). `mvn` may or may not be available as direct terminal command, check.
 
 If the build succeeds, you're done. If it fails, **read the error carefully** — common issues:
 - Missing imports (forgot to add a dependency to `pom.xml`)
