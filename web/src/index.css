@@ -1,0 +1,127 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens.
+ *
+ * Semantic values live on :root and flip with prefers-color-scheme, then are
+ * mapped into Tailwind's theme with `@theme inline`. Utilities such as
+ * `bg-canvas` or `text-ink` therefore adapt to dark mode automatically and
+ * component code never needs `dark:` variants.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  --c-canvas: #ffffff;
+  --c-surface: #fafafa;
+  --c-elevated: #ffffff;
+  --c-line: #e8e8ea;
+  --c-ink: #111113;
+  --c-muted: #71717a;
+
+  --c-primary: #111113;
+  --c-on-primary: #ffffff;
+
+  --c-accent: #2563eb;
+  --c-accent-soft: #eff4ff;
+  --c-danger: #dc2626;
+  --c-danger-soft: #fef2f2;
+
+  --c-st-requested: #d97706;
+  --c-st-matched: #2563eb;
+  --c-st-progress: #7c3aed;
+  --c-st-done: #16a34a;
+  --c-st-cancelled: #71717a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-canvas: #0b0b0c;
+    --c-surface: #141416;
+    --c-elevated: #18181b;
+    --c-line: #26262a;
+    --c-ink: #f5f5f7;
+    --c-muted: #a1a1aa;
+
+    --c-primary: #f5f5f7;
+    --c-on-primary: #111113;
+
+    --c-accent: #60a5fa;
+    --c-accent-soft: #16213a;
+    --c-danger: #f87171;
+    --c-danger-soft: #2a1416;
+
+    --c-st-requested: #f59e0b;
+    --c-st-matched: #60a5fa;
+    --c-st-progress: #a78bfa;
+    --c-st-done: #4ade80;
+    --c-st-cancelled: #a1a1aa;
+  }
+}
+
+@theme inline {
+  --color-canvas: var(--c-canvas);
+  --color-surface: var(--c-surface);
+  --color-elevated: var(--c-elevated);
+  --color-line: var(--c-line);
+  --color-ink: var(--c-ink);
+  --color-muted: var(--c-muted);
+
+  --color-primary: var(--c-primary);
+  --color-on-primary: var(--c-on-primary);
+
+  --color-accent: var(--c-accent);
+  --color-accent-soft: var(--c-accent-soft);
+  --color-danger: var(--c-danger);
+  --color-danger-soft: var(--c-danger-soft);
+
+  --color-st-requested: var(--c-st-requested);
+  --color-st-matched: var(--c-st-matched);
+  --color-st-progress: var(--c-st-progress);
+  --color-st-done: var(--c-st-done);
+  --color-st-cancelled: var(--c-st-cancelled);
+
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    sans-serif;
+
+  --radius-control: 8px;
+  --radius-card: 12px;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 4px 16px rgb(0 0 0 / 0.06);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--c-canvas);
+    color: var(--c-ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    font-synthesis: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--c-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
