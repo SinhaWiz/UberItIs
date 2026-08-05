@@ -14,6 +14,7 @@ import { DriverHomePage } from './pages/driver/DriverHomePage'
 import { RiderHistoryPage } from './pages/rider/RiderHistoryPage'
 import { RiderHomePage } from './pages/rider/RiderHomePage'
 import { ProfilePage } from './pages/ProfilePage'
+import { RideDetailPage } from './pages/RideDetailPage'
 import { AdminOverviewPage } from './pages/admin/AdminOverviewPage'
 import { AdminRidesPage } from './pages/admin/AdminRidesPage'
 import { AdminUsersPage } from './pages/admin/AdminUsersPage'
@@ -50,6 +51,7 @@ export default function App() {
           </Route>
 
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/rides/:rideId" element={<RideDetailPage />} />
         </Route>
 
         <Route element={<AppShell wide />}>
