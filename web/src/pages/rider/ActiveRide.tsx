@@ -10,7 +10,8 @@ import { StatusPill } from '../../components/StatusPill'
 import { useToast } from '../../components/Toast'
 import { queryKeys, useRide } from '../../hooks/queries'
 import { ApiError, api } from '../../lib/api'
-import { formatFare } from '../../lib/format'
+import { STATUS_LABEL, formatFare } from '../../lib/format'
+import { usePageTitle } from '../../hooks/usePageTitle'
 import { isTerminal, type Ride } from '../../types'
 import { SkeletonCard } from '../../components/Skeleton'
 
@@ -21,6 +22,7 @@ interface ActiveRideProps {
 }
 
 export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
+  usePageTitle('Your ride')
   const queryClient = useQueryClient()
   const { notify } = useToast()
   const [confirmingCancel, setConfirmingCancel] = useState(false)
@@ -81,6 +83,11 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
         </div>
         <StatusPill status={ride.status} />
       </header>
+
+      {/* Announce only the status change, not the whole timeline. */}
+      <p className="sr-only" aria-live="polite">
+        Ride status: {STATUS_LABEL[ride.status]}
+      </p>
 
       <Card>
         <RideTimeline ride={ride} />

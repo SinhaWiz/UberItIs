@@ -3,6 +3,7 @@ import { Skeleton } from '../../components/Skeleton'
 import { StatTile } from '../../components/StatTile'
 import { StatusPill } from '../../components/StatusPill'
 import { useActiveRides, useAllUsers } from '../../hooks/queries'
+import { usePageTitle } from '../../hooks/usePageTitle'
 import { countByStatus } from '../../lib/rides'
 import type { Role } from '../../types'
 
@@ -13,6 +14,7 @@ const ROLES: Role[] = ['RIDER', 'DRIVER', 'ADMIN']
  * from the users list and the active-rides list.
  */
 export function AdminOverviewPage() {
+  usePageTitle('Overview')
   const { data: users, isLoading: loadingUsers } = useAllUsers()
   const { data: activeRides, isLoading: loadingRides } = useActiveRides()
 

@@ -6,6 +6,7 @@ import {
   RequireRole,
 } from './auth/guards'
 import { AppShell } from './components/AppShell'
+import { ScrollToTop } from './components/ScrollToTop'
 import { LoginPage } from './pages/auth/LoginPage'
 import { RegisterPage } from './pages/auth/RegisterPage'
 import { DriverOnboardingPage } from './pages/driver/DriverOnboardingPage'
@@ -26,6 +27,15 @@ function RootRedirect() {
 }
 
 export default function App() {
+  return (
+    <>
+      <ScrollToTop />
+      <AppRoutes />
+    </>
+  )
+}
+
+function AppRoutes() {
   return (
     <Routes>
       <Route element={<RedirectIfAuthenticated />}>

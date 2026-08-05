@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { useCurrentUser } from '../../auth/AuthContext'
 import { Card } from '../../components/Card'
 import { EmptyState } from '../../components/EmptyState'
+import { ErrorState } from '../../components/ErrorState'
+import { usePageTitle } from '../../hooks/usePageTitle'
 import { FilterChips } from '../../components/FilterChips'
 import { RideListItem } from '../../components/RideListItem'
 import { SkeletonCard } from '../../components/Skeleton'
@@ -17,8 +19,9 @@ import {
 } from '../../lib/rides'
 
 export function DriverHistoryPage() {
+  usePageTitle('Your trips')
   const user = useCurrentUser()
-  const { data: rides, isLoading } = useRidesByDriver(user.id)
+  const { data: rides, isLoading, isError, error, refetch } = useRidesByDriver(user.id)
   const [filter, setFilter] = useState<RideFilter>('ALL')
 
   const all = useMemo(() => rides ?? [], [rides])
@@ -51,7 +54,9 @@ export function DriverHistoryPage() {
 
       <FilterChips options={RIDE_FILTERS} value={filter} onChange={setFilter} />
 
-      {isLoading ? (
+      {isError ? (
+        <ErrorState error={error} onRetry={() => refetch()} />
+      ) : isLoading ? (
         <div className="flex flex-col gap-3">
           <SkeletonCard />
           <SkeletonCard />

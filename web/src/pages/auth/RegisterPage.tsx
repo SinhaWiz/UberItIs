@@ -7,6 +7,7 @@ import { ApiError } from '../../lib/api'
 import { cn } from '../../lib/format'
 import type { Role } from '../../types'
 import { AuthLayout } from './AuthLayout'
+import { usePageTitle } from '../../hooks/usePageTitle'
 
 /** Admins are seeded by the team rather than self-registered. */
 const SIGNUP_ROLES: Array<{ value: Role; label: string; hint: string }> = [
@@ -15,6 +16,7 @@ const SIGNUP_ROLES: Array<{ value: Role; label: string; hint: string }> = [
 ]
 
 export function RegisterPage() {
+  usePageTitle('Create account')
   const { register } = useAuth()
   const navigate = useNavigate()
 

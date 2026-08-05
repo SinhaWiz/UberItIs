@@ -32,7 +32,7 @@ export function RideTimeline({ ride }: { ride: Ride }) {
     : STEPS.findIndex((step) => step.status === ride.status)
 
   return (
-    <ol className="flex flex-col" aria-live="polite">
+    <ol className="flex flex-col">
       {STEPS.map((step, index) => {
         const time = step.at(ride)
         const isDone = !cancelled && index < currentIndex

@@ -8,10 +8,12 @@ import { SkeletonCard } from '../components/Skeleton'
 import { StatusPill } from '../components/StatusPill'
 import { Button } from '../components/Button'
 import { useRide } from '../hooks/queries'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { formatDateTime, formatFare } from '../lib/format'
 
 /** Read-only view of a past ride, shared by the rider and driver histories. */
 export function RideDetailPage() {
+  usePageTitle('Trip details')
   const { rideId } = useParams<{ rideId: string }>()
   const navigate = useNavigate()
   const { data: ride, isLoading, isError } = useRide(rideId ?? null)

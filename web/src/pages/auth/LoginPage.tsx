@@ -5,8 +5,10 @@ import { Button } from '../../components/Button'
 import { Input } from '../../components/Input'
 import { ApiError } from '../../lib/api'
 import { AuthLayout } from './AuthLayout'
+import { usePageTitle } from '../../hooks/usePageTitle'
 
 export function LoginPage() {
+  usePageTitle('Sign in')
   const { login } = useAuth()
   const navigate = useNavigate()
 

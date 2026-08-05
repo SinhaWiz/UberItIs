@@ -17,6 +17,7 @@ import {
 import { ApiError, api } from '../../lib/api'
 import type { DriverProfile, Ride } from '../../types'
 import { AssignedRide } from './AssignedRide'
+import { usePageTitle } from '../../hooks/usePageTitle'
 
 /** Trips the driver is actively responsible for right now. */
 function findAssignedRide(rides: Ride[] | undefined): Ride | undefined {
@@ -26,6 +27,7 @@ function findAssignedRide(rides: Ride[] | undefined): Ride | undefined {
 }
 
 export function DriverHomePage() {
+  usePageTitle('Drive')
   const user = useCurrentUser()
   const queryClient = useQueryClient()
   const { notify } = useToast()

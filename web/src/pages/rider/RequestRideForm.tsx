@@ -7,6 +7,7 @@ import { useToast } from '../../components/Toast'
 import { queryKeys } from '../../hooks/queries'
 import { ApiError, api } from '../../lib/api'
 import type { Ride } from '../../types'
+import { usePageTitle } from '../../hooks/usePageTitle'
 
 /**
  * Requests the ride, then immediately asks the backend to match a driver —
@@ -15,6 +16,7 @@ import type { Ride } from '../../types'
  * retried from the active-ride screen.
  */
 export function RequestRideForm({ riderId }: { riderId: string }) {
+  usePageTitle('Request a ride')
   const queryClient = useQueryClient()
   const { notify } = useToast()
 

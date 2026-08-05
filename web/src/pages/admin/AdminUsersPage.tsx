@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Card } from '../../components/Card'
 import { EmptyState } from '../../components/EmptyState'
+import { ErrorState } from '../../components/ErrorState'
+import { usePageTitle } from '../../hooks/usePageTitle'
 import { FilterChips } from '../../components/FilterChips'
 import { Skeleton } from '../../components/Skeleton'
 import { Table, Td, Th, Tr } from '../../components/Table'
@@ -24,7 +26,8 @@ const ROLE_STYLES: Record<Role, string> = {
 }
 
 export function AdminUsersPage() {
-  const { data: users, isLoading } = useAllUsers()
+  usePageTitle('Users')
+  const { data: users, isLoading, isError, error, refetch } = useAllUsers()
   const [filter, setFilter] = useState<RoleFilter>('ALL')
 
   // Filtering client-side keeps it instant; the list is already loaded.
@@ -42,7 +45,9 @@ export function AdminUsersPage() {
 
       <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
 
-      {isLoading ? (
+      {isError ? (
+        <ErrorState error={error} onRetry={() => refetch()} />
+      ) : isLoading ? (
         <Skeleton className="h-64" />
       ) : visible.length === 0 ? (
         <Card padded={false}>

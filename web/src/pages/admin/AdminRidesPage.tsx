@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '../../components/Card'
 import { EmptyState } from '../../components/EmptyState'
+import { ErrorState } from '../../components/ErrorState'
+import { usePageTitle } from '../../hooks/usePageTitle'
 import { Skeleton } from '../../components/Skeleton'
 import { StatusPill } from '../../components/StatusPill'
 import { Table, Td, Th, Tr } from '../../components/Table'
@@ -10,7 +12,8 @@ import { formatFare, timeAgo } from '../../lib/format'
 import { sortByNewest } from '../../lib/rides'
 
 export function AdminRidesPage() {
-  const { data: rides, isLoading } = useActiveRides()
+  usePageTitle('Active rides')
+  const { data: rides, isLoading, isError, error, refetch } = useActiveRides()
   const { data: users } = useAllUsers()
 
   /*
@@ -34,7 +37,9 @@ export function AdminRidesPage() {
         </p>
       </header>
 
-      {isLoading ? (
+      {isError ? (
+        <ErrorState error={error} onRetry={() => refetch()} />
+      ) : isLoading ? (
         <Skeleton className="h-64" />
       ) : visible.length === 0 ? (
         <Card padded={false}>

@@ -8,8 +8,10 @@ import { useToast } from '../components/Toast'
 import { queryKeys, useDriverProfile } from '../hooks/queries'
 import { ApiError, api } from '../lib/api'
 import type { DriverProfile, User } from '../types'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export function ProfilePage() {
+  usePageTitle('Profile')
   const user = useCurrentUser()
   const { updateUser } = useAuth()
   const queryClient = useQueryClient()
