@@ -26,9 +26,8 @@ Start these before the UI, in this order:
 3. `api-gateway` (:8080) — wait ~30s for it to pull the Eureka registry
 4. `user-service` (:8081), `driver-service` (:8083), `ride-service` (:8082)
 
-The gateway allows `http://localhost:5173` via `CorsConfig`. If you run the dev
-server on a different port, add that origin there too, or the browser will
-block every request.
+The gateway's `CorsConfig` allows any `localhost` port, so it still works when
+Vite falls back to 5174+ because 5173 is already taken.
 
 ## Structure
 
