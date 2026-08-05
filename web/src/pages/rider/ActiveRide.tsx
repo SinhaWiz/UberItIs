@@ -1,0 +1,153 @@
+import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Button } from '../../components/Button'
+import { Card, CardRow } from '../../components/Card'
+import { DriverCard } from '../../components/DriverCard'
+import { Modal } from '../../components/Modal'
+import { RideTimeline } from '../../components/RideTimeline'
+import { RouteLine } from '../../components/RouteLine'
+import { StatusPill } from '../../components/StatusPill'
+import { useToast } from '../../components/Toast'
+import { queryKeys, useRide } from '../../hooks/queries'
+import { ApiError, api } from '../../lib/api'
+import { formatFare } from '../../lib/format'
+import { isTerminal, type Ride } from '../../types'
+import { SkeletonCard } from '../../components/Skeleton'
+
+interface ActiveRideProps {
+  rideId: string
+  riderId: string
+  onDismiss: () => void
+}
+
+export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
+  const queryClient = useQueryClient()
+  const { notify } = useToast()
+  const [confirmingCancel, setConfirmingCancel] = useState(false)
+
+  const { data: ride, isLoading } = useRide(rideId)
+
+  const invalidate = (updated: Ride) => {
+    queryClient.setQueryData(queryKeys.ride(rideId), updated)
+    queryClient.invalidateQueries({ queryKey: queryKeys.ridesByRider(riderId) })
+  }
+
+  const cancelRide = useMutation({
+    mutationFn: () => api.put<Ride>(`/api/rides/${rideId}/cancel`),
+    onSuccess: (updated) => {
+      invalidate(updated)
+      setConfirmingCancel(false)
+      notify('Ride cancelled')
+    },
+    onError: (caught) => {
+      setConfirmingCancel(false)
+      notify(caught instanceof ApiError ? caught.message : 'Could not cancel', 'error')
+    },
+  })
+
+  const findDriver = useMutation({
+    mutationFn: () => api.put<Ride>(`/api/rides/${rideId}/match`, {}),
+    onSuccess: (updated) => {
+      invalidate(updated)
+      notify('Driver found. Hang tight.')
+    },
+    onError: (caught) => {
+      notify(
+        caught instanceof ApiError ? caught.message : 'Could not find a driver',
+        'error',
+      )
+    },
+  })
+
+  if (isLoading || !ride) {
+    return <SkeletonCard />
+  }
+
+  const finished = isTerminal(ride.status)
+  const waitingForDriver = ride.status === 'REQUESTED' && !ride.driverId
+
+  return (
+    <div className="flex flex-col gap-5">
+      <header className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {finished ? 'Trip summary' : 'Your ride'}
+          </h1>
+          <p className="text-sm text-muted">
+            {finished
+              ? 'This trip has ended.'
+              : 'We’ll keep this up to date automatically.'}
+          </p>
+        </div>
+        <StatusPill status={ride.status} />
+      </header>
+
+      <Card>
+        <RideTimeline ride={ride} />
+      </Card>
+
+      {ride.driverId && (
+        <Card>
+          <DriverCard driverId={ride.driverId} />
+        </Card>
+      )}
+
+      <Card>
+        <RouteLine
+          pickup={ride.pickupLocation}
+          dropoff={ride.dropoffLocation}
+        />
+      </Card>
+
+      <Card>
+        <CardRow label="Fare estimate" value={formatFare(ride.fareEstimate)} />
+        {ride.finalFare !== null && (
+          <CardRow label="Final fare" value={formatFare(ride.finalFare)} />
+        )}
+      </Card>
+
+      <div className="flex flex-col gap-2">
+        {waitingForDriver && (
+          <Button
+            fullWidth
+            size="lg"
+            loading={findDriver.isPending}
+            onClick={() => findDriver.mutate()}
+          >
+            Find a driver
+          </Button>
+        )}
+
+        {finished ? (
+          <Button fullWidth size="lg" onClick={onDismiss}>
+            {ride.status === 'COMPLETED' ? 'Done' : 'Request another ride'}
+          </Button>
+        ) : (
+          <Button
+            variant="danger"
+            fullWidth
+            onClick={() => setConfirmingCancel(true)}
+          >
+            Cancel ride
+          </Button>
+        )}
+      </div>
+
+      <Modal
+        open={confirmingCancel}
+        title="Cancel this ride?"
+        description={
+          ride.driverId
+            ? 'Your driver will be released and this trip will be marked cancelled.'
+            : 'This trip will be marked cancelled.'
+        }
+        confirmLabel="Cancel ride"
+        cancelLabel="Keep ride"
+        destructive
+        loading={cancelRide.isPending}
+        onConfirm={() => cancelRide.mutate()}
+        onCancel={() => setConfirmingCancel(false)}
+      />
+    </div>
+  )
+}
