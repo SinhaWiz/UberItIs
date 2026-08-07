@@ -45,9 +45,9 @@ export function HomePage() {
               Sign up to ride
             </Button>
           </div>
-          <div className="flex-1 w-full max-w-md">
-             <div className="aspect-[4/3] bg-surface rounded-2xl flex items-center justify-center overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&q=80&w=800" alt="Ride" className="w-full h-full object-cover opacity-90" />
+          <div className="flex-1 w-full max-w-lg">
+             <div className="w-full rounded-2xl flex items-center justify-center overflow-hidden shadow-sm">
+                <img src="/hero.png" alt="Hero" className="w-full h-auto object-cover" />
              </div>
           </div>
         </section>
