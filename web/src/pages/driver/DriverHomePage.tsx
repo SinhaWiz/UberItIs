@@ -123,11 +123,11 @@ export function DriverHomePage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
+      <header className="flex flex-col gap-2 mb-2">
+        <h1 className="text-[32px] leading-tight font-bold tracking-tight text-ink">
           {profile.isAvailable ? 'You’re online' : 'You’re offline'}
         </h1>
-        <p className="text-sm text-muted">
+        <p className="text-base font-medium text-ink/70">
           {profile.isAvailable
             ? 'Waiting for a trip to come your way.'
             : 'Go online to start receiving trips.'}
