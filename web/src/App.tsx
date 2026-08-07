@@ -19,6 +19,7 @@ import { RideDetailPage } from './pages/RideDetailPage'
 import { AdminOverviewPage } from './pages/admin/AdminOverviewPage'
 import { AdminRidesPage } from './pages/admin/AdminRidesPage'
 import { AdminUsersPage } from './pages/admin/AdminUsersPage'
+import { HomePage } from './pages/HomePage'
 
 /** Sends people to their role's home, or to sign-in when signed out. */
 function RootRedirect() {
@@ -39,6 +40,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route element={<RedirectIfAuthenticated />}>
+        <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
       </Route>
