@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { LogOut } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { cn } from '../lib/format'
 import type { Role } from '../types'
@@ -41,35 +42,29 @@ export function AppShell({ wide = false }: { wide?: boolean }) {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col bg-canvas">
-      <header className="sticky top-0 z-40 border-b border-line bg-canvas/85 backdrop-blur-sm">
-        <div
-          className={cn(
-            'mx-auto px-4 h-14 flex items-center justify-between gap-4',
-            wide ? 'max-w-6xl' : 'max-w-md',
-          )}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-2xl font-bold tracking-tight text-ink">Uber</span>
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider truncate mt-1">
-              {user.role.toLowerCase()}
-            </span>
+    <div className="min-h-dvh flex bg-canvas md:flex-row flex-col">
+      <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-line bg-canvas flex flex-col md:h-dvh md:sticky md:top-0">
+        <div className="p-6 md:p-8">
+          <div className="flex items-center justify-between md:justify-start gap-2 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-3xl font-bold tracking-tight text-ink">Uber</span>
+              <span className="text-xs font-semibold text-muted uppercase tracking-wider truncate mt-1">
+                {user.role.toLowerCase()}
+              </span>
+            </div>
+            
+            {/* Mobile Log Out icon */}
+            <button
+              onClick={onSignOut}
+              aria-label="Log Out"
+              className="md:hidden text-muted hover:text-ink transition-colors p-2"
+            >
+              <LogOut size={20} />
+            </button>
           </div>
-
-          <button
-            onClick={onSignOut}
-            className="text-sm font-medium text-ink bg-canvas-soft hover:bg-surface px-4 py-2 rounded-full transition-colors duration-150"
-          >
-            Sign out
-          </button>
         </div>
 
-        <nav
-          className={cn(
-            'mx-auto px-4 flex items-center gap-1 overflow-x-auto',
-            wide ? 'max-w-6xl' : 'max-w-md',
-          )}
-        >
+        <nav className="px-4 pb-4 md:pb-0 md:px-6 flex md:flex-col gap-2 overflow-x-auto md:overflow-visible">
           {items.map((item) => (
             <NavLink
               key={item.to}
@@ -77,11 +72,10 @@ export function AppShell({ wide = false }: { wide?: boolean }) {
               end={item.to === '/ride' || item.to === '/drive' || item.to === '/admin'}
               className={({ isActive }) =>
                 cn(
-                  'px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors duration-150',
-                  'border-b-2 -mb-px',
+                  'px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 rounded-xl',
                   isActive
-                    ? 'text-ink border-ink'
-                    : 'text-muted border-transparent hover:text-ink',
+                    ? 'text-on-primary bg-primary'
+                    : 'text-ink hover:bg-canvas-soft',
                 )
               }
             >
@@ -89,12 +83,22 @@ export function AppShell({ wide = false }: { wide?: boolean }) {
             </NavLink>
           ))}
         </nav>
-      </header>
+
+        <div className="p-6 mt-auto hidden md:block">
+          <button
+            onClick={onSignOut}
+            className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-ink hover:bg-canvas-soft rounded-xl transition-colors duration-150"
+          >
+            <LogOut size={20} />
+            Log Out
+          </button>
+        </div>
+      </aside>
 
       <main
         className={cn(
-          'flex-1 mx-auto w-full px-4 py-6',
-          wide ? 'max-w-6xl' : 'max-w-md',
+          'flex-1 mx-auto w-full px-4 py-8 md:py-12 md:px-8',
+          wide ? 'max-w-6xl' : 'max-w-xl',
         )}
       >
         <Outlet />
