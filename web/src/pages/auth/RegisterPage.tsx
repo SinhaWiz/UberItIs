@@ -86,11 +86,11 @@ export function RegisterPage() {
                   onClick={() => setRole(option.value)}
                   aria-pressed={selected}
                   className={cn(
-                    'flex flex-col items-start gap-0.5 p-3 rounded-[var(--radius-control)]',
-                    'border text-left transition-colors duration-150',
+                    'flex flex-col items-start gap-0.5 p-4 rounded-xl',
+                    'border-2 text-left transition-colors duration-150',
                     selected
-                      ? 'border-ink bg-surface'
-                      : 'border-line hover:border-muted/50',
+                      ? 'border-ink bg-canvas-soft'
+                      : 'border-transparent bg-canvas-soft hover:bg-surface',
                   )}
                 >
                   <span className="text-sm font-medium text-ink">
