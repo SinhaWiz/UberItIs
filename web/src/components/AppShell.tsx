@@ -50,15 +50,15 @@ export function AppShell({ wide = false }: { wide?: boolean }) {
           )}
         >
           <div className="flex items-center gap-2 min-w-0">
-            <span className="font-semibold tracking-tight">Uber</span>
-            <span className="text-xs text-muted uppercase tracking-wider truncate">
+            <span className="text-2xl font-bold tracking-tight text-ink">Uber</span>
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider truncate mt-1">
               {user.role.toLowerCase()}
             </span>
           </div>
 
           <button
             onClick={onSignOut}
-            className="text-sm text-muted hover:text-ink transition-colors duration-150"
+            className="text-sm font-medium text-ink bg-canvas-soft hover:bg-surface px-4 py-2 rounded-full transition-colors duration-150"
           >
             Sign out
           </button>
