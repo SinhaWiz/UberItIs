@@ -1,0 +1,133 @@
+### =============================
+### Payment Service API Tests
+### =============================
+### Prerequisite: payment-service (8084) and RabbitMQ must be running.
+### payment-service makes no outbound calls, so it can be tested standalone —
+### no other service needs to be up.
+### Run these requests sequentially from top to bottom.
+
+### 1. Calculate a fare preview (no persistence)
+POST http://localhost:8084/api/payments/calculate
+Content-Type: application/json
+
+{
+  "rideId": "preview-ride-1"
+}
+
+> {%
+    client.test("Fare calculated", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.fare >= response.body.baseFare, "Fare should be at least the base fare");
+        client.assert(response.body.distanceKm >= 2.0 && response.body.distanceKm <= 20.0, "Distance should be within the simulated range");
+    });
+%}
+
+###
+
+### 2. Process payment for a completed ride
+POST http://localhost:8084/api/payments/process
+Content-Type: application/json
+
+{
+  "rideId": "ride-abc-1",
+  "riderId": "rider-1",
+  "driverId": "driver-1"
+}
+
+> {%
+    client.test("Payment processed", function() {
+        client.assert(response.status === 201, "Expected 201 Created");
+        client.assert(response.body.status === "COMPLETED", "Status should be COMPLETED");
+        client.assert(response.body.paymentMethod === "CASH", "Default payment method should be CASH");
+        client.assert(response.body.amount >= 50.0, "Amount should be at least the base fare");
+    });
+    client.global.set("paymentId", response.body.id);
+%}
+
+###
+
+### 3. Try to process payment again for the same ride (should fail with 409)
+POST http://localhost:8084/api/payments/process
+Content-Type: application/json
+
+{
+  "rideId": "ride-abc-1",
+  "riderId": "rider-1",
+  "driverId": "driver-1"
+}
+
+> {%
+    client.test("Duplicate payment rejected", function() {
+        client.assert(response.status === 409, "Expected 409 Conflict");
+    });
+%}
+
+###
+
+### 4. Get payment by id
+GET http://localhost:8084/api/payments/{{paymentId}}
+
+> {%
+    client.test("Get payment by id successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.rideId === "ride-abc-1", "rideId should match");
+    });
+%}
+
+###
+
+### 5. Get payment by ride id
+GET http://localhost:8084/api/payments/ride/ride-abc-1
+
+> {%
+    client.test("Get payment by ride successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.id === client.global.get("paymentId"), "Should be the same payment");
+    });
+%}
+
+###
+
+### 6. Get payment for a ride with no payment (should fail with 404)
+GET http://localhost:8084/api/payments/ride/nonexistent-ride
+
+> {%
+    client.test("Non-existent ride payment returns 404", function() {
+        client.assert(response.status === 404, "Expected 404 Not Found");
+    });
+%}
+
+###
+
+### 7. Get payment history for the rider
+GET http://localhost:8084/api/payments/rider/rider-1
+
+> {%
+    client.test("Rider payment history returned", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length > 0, "Rider should have at least 1 payment");
+    });
+%}
+
+###
+
+### 8. Get earnings history for the driver
+GET http://localhost:8084/api/payments/driver/driver-1
+
+> {%
+    client.test("Driver earnings history returned", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length > 0, "Driver should have at least 1 payment");
+    });
+%}
+
+###
+
+### 9. Get a non-existent payment by id (should fail with 404)
+GET http://localhost:8084/api/payments/000000000000000000000000
+
+> {%
+    client.test("Non-existent payment returns 404", function() {
+        client.assert(response.status === 404, "Expected 404 Not Found");
+    });
+%}
