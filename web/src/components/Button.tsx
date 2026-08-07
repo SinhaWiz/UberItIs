@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { cn } from '../lib/format'
 import { Spinner } from './Spinner'
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'subtle'
 type Size = 'sm' | 'md' | 'lg'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -17,7 +17,9 @@ const VARIANTS: Record<Variant, string> = {
   primary:
     'bg-primary text-on-primary hover:opacity-90 active:opacity-80 border border-transparent',
   secondary:
-    'bg-elevated text-ink border border-line hover:bg-surface active:bg-surface',
+    'bg-canvas text-ink hover:bg-surface active:bg-surface',
+  subtle:
+    'bg-canvas-soft text-ink hover:bg-surface active:bg-surface',
   ghost:
     'bg-transparent text-muted border border-transparent hover:text-ink hover:bg-surface',
   danger:
@@ -46,7 +48,7 @@ export function Button({
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cn(
-        'inline-flex items-center justify-center rounded-[var(--radius-control)]',
+        'inline-flex items-center justify-center rounded-full',
         'font-medium transition-[opacity,background-color] duration-150',
         'disabled:opacity-45 disabled:pointer-events-none select-none',
         VARIANTS[variant],
