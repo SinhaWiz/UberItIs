@@ -18,6 +18,7 @@ import org.uber.rideservice.model.RideStatus;
 import org.uber.rideservice.repository.RideRepository;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -228,19 +229,30 @@ public class RideService {
     }
 
     /**
-     * TODO: Call Payment Service to process payment for the completed ride.
-     *
-     * Target: POST http://payment-service/api/payments/process
-     * Expected request: {rideId, riderId, driverId, distance}
-     * Expected response: Payment object with a computed "amount" field
-     * (fare = baseFare 50.0 + distance * perKmRate 15.0, per report.md Section 5.3.4).
-     *
-     * payment-service is not implemented yet, so this currently skips the call entirely and
-     * returns the ride's fareEstimate as the finalFare. Replace this once payment-service exists.
-     * See report.md Section 5.3.4 and 7.2 for the Payment Service API spec.
+     * Calls Payment Service to process payment for the completed ride and returns the
+     * final charged amount. Falls back to the ride's fareEstimate if payment-service is
+     * unreachable, so a payment-service outage doesn't block ride completion — unlike the
+     * user-service/driver-service calls above, a failure here is not treated as fatal.
      */
+    @SuppressWarnings("unchecked")
     private Double processPayment(Ride ride) {
-        return ride.getFareEstimate();
+        try {
+            Map<String, Object> request = new HashMap<>();
+            request.put("rideId", ride.getId());
+            request.put("riderId", ride.getRiderId());
+            request.put("driverId", ride.getDriverId());
+
+            Map<String, Object> response = restTemplate.postForObject(
+                    "http://payment-service/api/payments/process",
+                    request,
+                    Map.class
+            );
+
+            Object amount = response != null ? response.get("amount") : null;
+            return amount != null ? ((Number) amount).doubleValue() : ride.getFareEstimate();
+        } catch (Exception e) {
+            return ride.getFareEstimate();
+        }
     }
 
     /**
