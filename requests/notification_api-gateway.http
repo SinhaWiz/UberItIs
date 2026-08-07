@@ -1,0 +1,85 @@
+### =============================
+### Notification Service API Gateway Tests
+### =============================
+### Prerequisite: API Gateway (8080), user-service, notification-service, and
+### RabbitMQ must be running. Every /api/notifications/** route requires a valid JWT.
+###
+### Like requests/notification.http, requests 3+ here need real ride/payment
+### events to have already been published — run requests/ride_api-gateway.http
+### first in the SAME IntelliJ HTTP Client session.
+
+### 1. Register a Rider user (via Gateway)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Dana GW Notified",
+  "email": "dana_gw_notify@example.com",
+  "password": "securePass123",
+  "phone": "+8801788888888",
+  "role": "RIDER"
+}
+
+> {%
+    client.test("Rider user registration successful", function() {
+        client.assert(response.status === 201 || response.status === 409, "Expected 201 Created or 409 Conflict");
+    });
+%}
+
+###
+
+### 2. Login as the Rider to get a token (via Gateway)
+POST http://localhost:8080/api/users/login
+Content-Type: application/json
+
+{
+  "email": "dana_gw_notify@example.com",
+  "password": "securePass123"
+}
+
+> {%
+    client.test("Rider login successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.token !== null, "Token should be present");
+    });
+    client.global.set("gwAuthToken", response.body.token);
+    client.global.set("gwUserId", response.body.user.id);
+%}
+
+###
+
+### 3. Get notifications for a fresh user (no prerequisites, via Gateway)
+GET http://localhost:8080/api/notifications/user/{{gwUserId}}
+Authorization: Bearer {{gwAuthToken}}
+
+> {%
+    client.test("Empty notification list for a fresh user via gateway", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length === 0, "Should be an empty array for a brand-new user");
+    });
+%}
+
+###
+
+### 4. Get notifications for the rider from requests/ride_api-gateway.http
+### (run that file first — this reads client.global "riderId" it set)
+GET http://localhost:8080/api/notifications/user/{{riderId}}
+Authorization: Bearer {{gwAuthToken}}
+
+> {%
+    client.test("Rider has notifications from the ride lifecycle, via gateway", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length > 0, "Rider should have at least 1 notification");
+    });
+%}
+
+###
+
+### 5. Attempt to read notifications without a token (should fail, gateway auth filter blocks it)
+GET http://localhost:8080/api/notifications/user/{{riderId}}
+
+> {%
+    client.test("Unauthenticated request rejected", function() {
+        client.assert(response.status === 401 || response.status === 403, "Expected 401 or 403");
+    });
+%}
