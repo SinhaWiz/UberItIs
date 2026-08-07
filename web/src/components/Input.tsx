@@ -3,9 +3,9 @@ import { useId } from 'react'
 import { cn } from '../lib/format'
 
 const FIELD_CLASSES =
-  'w-full h-11 px-3 rounded-[var(--radius-control)] bg-elevated text-ink ' +
-  'border border-line placeholder:text-muted transition-colors duration-150 ' +
-  'hover:border-muted/50 disabled:opacity-50 disabled:pointer-events-none'
+  'w-full h-11 px-4 rounded-lg bg-canvas-soft text-ink ' +
+  'border border-transparent placeholder:text-muted transition-colors duration-150 ' +
+  'focus:bg-surface focus:border-ink disabled:opacity-50 disabled:pointer-events-none'
 
 interface FieldShellProps {
   id: string
