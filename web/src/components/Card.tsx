@@ -11,8 +11,8 @@ export function Card({ children, padded = true, className, ...props }: CardProps
     <div
       {...props}
       className={cn(
-        'bg-elevated border border-line rounded-[var(--radius-card)]',
-        padded && 'p-4',
+        'bg-canvas rounded-2xl',
+        padded && 'p-6',
         className,
       )}
     >
