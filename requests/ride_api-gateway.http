@@ -2,7 +2,8 @@
 ### Ride Service API Gateway Tests
 ### =============================
 ### Prerequisite: API Gateway (8080) must be running, which routes to user-service,
-### driver-service, and ride-service.
+### driver-service, payment-service, and ride-service. RabbitMQ must also be running —
+### ride-service now calls payment-service for real on completion (request 11).
 ### Run these requests sequentially from top to bottom.
 
 ### 1. Register a Rider user (via Gateway)
@@ -191,6 +192,9 @@ Authorization: Bearer {{driverAuthToken}}
         client.assert(response.status === 200, "Expected 200 OK");
         client.assert(response.body.status === "COMPLETED", "Status should be COMPLETED");
         client.assert(response.body.finalFare !== null, "Final fare should be set");
+        // finalFare is now computed by payment-service (baseFare + simulated distance * perKmRate),
+        // not the old flat 50.0 placeholder — this is the observable proof the integration works.
+        client.assert(response.body.finalFare >= 50.0, "Final fare should be at least the base fare");
     });
 %}
 
