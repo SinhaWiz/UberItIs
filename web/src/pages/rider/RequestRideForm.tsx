@@ -63,9 +63,9 @@ export function RequestRideForm({ riderId }: { riderId: string }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Where to?</h1>
-        <p className="text-sm text-muted">
+      <header className="flex flex-col gap-2 mb-2">
+        <h1 className="text-[32px] leading-tight font-bold tracking-tight text-ink">Where to?</h1>
+        <p className="text-base font-medium text-ink/70">
           Enter your pickup and destination to find a driver.
         </p>
       </header>
