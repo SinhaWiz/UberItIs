@@ -7,7 +7,7 @@ spring:
   application:
     name: driver-service
   mongodb:
-    uri: mongodb+srv://${MONGO_DB_USER}:${MONGO_DB_PASS}@cluster0.2s8gm.mongodb.net/uber_driver_db?appName=cluster0
+    uri: mongodb+srv://${MONGO_DB_USER}:${MONGO_DB_PASS}@${MONGO_CLUSTER_HOST}/uber_driver_db?appName=uber
 
 eureka:
   instance:
