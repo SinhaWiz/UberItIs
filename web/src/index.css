@@ -97,7 +97,6 @@
   *:focus-visible {
     outline: 2px solid var(--c-primary);
     outline-offset: 2px;
-    border-radius: var(--radius-control);
   }
 
   @media (prefers-reduced-motion: reduce) {

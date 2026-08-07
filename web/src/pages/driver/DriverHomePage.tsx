@@ -16,6 +16,7 @@ import {
 } from '../../hooks/queries'
 import { ApiError, api } from '../../lib/api'
 import type { DriverProfile, Ride } from '../../types'
+import { LocationPicker } from '../../components/LocationPicker'
 import { AssignedRide } from './AssignedRide'
 import { usePageTitle } from '../../hooks/usePageTitle'
 
@@ -164,6 +165,17 @@ export function DriverHomePage() {
             </button>
           </div>
 
+          <div className="mt-2 mb-4">
+            <LocationPicker 
+              initialLatitude={profile.currentLatitude || undefined}
+              initialLongitude={profile.currentLongitude || undefined}
+              onLocationChange={(lat, lng) => {
+                setLatitude(lat.toFixed(6))
+                setLongitude(lng.toFixed(6))
+              }}
+            />
+          </div>
+          
           <div className="grid grid-cols-2 gap-3">
             <Input
               label="Latitude"
