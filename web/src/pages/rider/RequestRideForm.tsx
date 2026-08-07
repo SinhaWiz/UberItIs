@@ -67,13 +67,43 @@ export function RequestRideForm({ riderId }: { riderId: string }) {
     requestRide.mutate()
   }
 
-  function handleSetLocation() {
-    const locString = `${tempLat.toFixed(6)}, ${tempLng.toFixed(6)}`
-    if (activeTab === 'pickup') {
-      setPickup(locString)
-      setActiveTab('dropoff')
-    } else {
-      setDropoff(locString)
+  const [fetchingGeocode, setFetchingGeocode] = useState(false)
+
+  async function handleSetLocation() {
+    setFetchingGeocode(true)
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${tempLat}&lon=${tempLng}`,
+        { headers: { 'Accept-Language': 'en' } }
+      )
+      
+      let displayName = 'Unknown Location'
+      if (res.ok) {
+        const data = await res.json()
+        if (data.display_name) {
+          displayName = data.display_name.split(',')[0]
+        }
+      }
+      
+      const locString = `${displayName} (${tempLng.toFixed(6)}, ${tempLat.toFixed(6)})`
+      
+      if (activeTab === 'pickup') {
+        setPickup(locString)
+        setActiveTab('dropoff')
+      } else {
+        setDropoff(locString)
+      }
+    } catch (e) {
+      console.error(e)
+      const locString = `Unknown Location (${tempLng.toFixed(6)}, ${tempLat.toFixed(6)})`
+      if (activeTab === 'pickup') {
+        setPickup(locString)
+        setActiveTab('dropoff')
+      } else {
+        setDropoff(locString)
+      }
+    } finally {
+      setFetchingGeocode(false)
     }
   }
 
@@ -127,6 +157,7 @@ export function RequestRideForm({ riderId }: { riderId: string }) {
           <Button 
             variant="secondary" 
             onClick={handleSetLocation}
+            loading={fetchingGeocode}
             fullWidth
           >
             {activeTab === 'pickup' ? 'Set Pickup Location' : 'Set Dropoff Location'}

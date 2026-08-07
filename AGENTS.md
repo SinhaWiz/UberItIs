@@ -181,3 +181,10 @@ When registering services with Eureka for the API Gateway to route to, you **mus
 ### 4.7 RestTemplate and LoadBalancing
 Since Spring Cloud 2020.0 (which removed Netflix Ribbon), adding `@LoadBalanced` to a `RestTemplate` bean is **not enough** on its own. You **must** explicitly include the `spring-cloud-starter-loadbalancer` dependency in the service's `pom.xml`. If this dependency is missing, the code will fail to compile, or the `RestTemplate` will attempt to resolve Eureka service IDs via standard DNS, resulting in `UnknownHostException`s during inter-service communication.
 
+### 4.8 Backend TODOs & Technical Debt
+The following features are currently implemented as stubs and need to be properly implemented in future iterations:
+- **1. Nearest Driver Matching**: `RideService` currently grabs the first available driver from `/available`. It needs to be updated to call `/api/drivers/nearby` using actual coordinates.
+- **2. Fare Calculation**: `RideService` returns a hardcoded `baseFare` (50.0). This must be replaced with an actual call to the `payment-service` to calculate distance-based fares.
+- **3. Database Schema Updates**: To support the above calculations, the `Ride` model and MongoDB schema must be updated to explicitly store `pickupLat`, `pickupLng`, `dropoffLat`, and `dropoffLng` as numeric fields, rather than parsing them out of the display name strings.
+- **4. Asynchronous Driver Matching**: The system currently matches a driver immediately/synchronously upon a ride request. This must be decoupled. A ride should remain in the `REQUESTED` state while the nearest top 2 drivers are pinged via the `notification-service` (RabbitMQ events).
+- **5. Driver Acceptance Flow**: Drivers should receive ride requests and explicitly accept them. Only upon acceptance should the ride status transition to `MATCHED` and bind the driver to the ride.

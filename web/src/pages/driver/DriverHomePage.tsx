@@ -19,6 +19,8 @@ import type { DriverProfile, Ride } from '../../types'
 import { LocationPicker } from '../../components/LocationPicker'
 import { AssignedRide } from './AssignedRide'
 import { usePageTitle } from '../../hooks/usePageTitle'
+import { useReverseGeocode } from '../../hooks/useReverseGeocode'
+import { MapPin } from 'lucide-react'
 
 /** Trips the driver is actively responsible for right now. */
 function findAssignedRide(rides: Ride[] | undefined): Ride | undefined {
@@ -41,6 +43,11 @@ export function DriverHomePage() {
 
   const { data: rides } = useRidesByDriver(user.id, true)
   const assignedRide = findAssignedRide(rides)
+
+  const { data: locationName, isLoading: loadingLocationName } = useReverseGeocode(
+    profile?.currentLatitude || undefined,
+    profile?.currentLongitude || undefined
+  )
 
   const [latitude, setLatitude] = useState('')
   const [longitude, setLongitude] = useState('')
@@ -163,6 +170,24 @@ export function DriverHomePage() {
             >
               Use my location
             </button>
+          </div>
+
+          <div className="flex items-start gap-2 bg-canvas-soft p-3 rounded-xl border border-transparent">
+            <MapPin size={18} className="text-ink mt-0.5 shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-ink">
+                {profile?.currentLatitude && profile?.currentLongitude
+                  ? loadingLocationName
+                    ? 'Loading address...'
+                    : locationName || 'Unknown Location'
+                  : 'Not set'}
+              </span>
+              {profile?.currentLatitude && profile?.currentLongitude && (
+                <span className="text-xs text-muted">
+                  {profile.currentLatitude}, {profile.currentLongitude}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="mt-2 mb-4">
