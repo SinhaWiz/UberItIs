@@ -1,0 +1,88 @@
+### =============================
+### Notification Service API Tests
+### =============================
+### Prerequisite: notification-service (8085) and RabbitMQ must be running.
+###
+### Notifications are only ever CREATED by consuming ride.status.changed /
+### payment.completed events off RabbitMQ — there is no direct "create" endpoint.
+### Requests 1-2 below need no prerequisites and can run standalone on a fresh DB.
+### Requests 3+ need real events to have been published first: run
+### requests/ride_api-gateway.http (with eureka, gateway, user, driver, payment,
+### rabbitmq, and ride-service all running) in the SAME IntelliJ HTTP Client session
+### BEFORE running these, so client.global "riderId" is populated and real
+### notifications exist for that rider.
+
+### 1. Get notifications for a user with none yet (fresh DB, no prerequisites)
+GET http://localhost:8085/api/notifications/user/000000000000000000000000
+
+> {%
+    client.test("Empty notification list for unknown user", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length === 0, "Should be an empty array");
+    });
+%}
+
+###
+
+### 2. Mark a non-existent notification as read (should fail with 404)
+PUT http://localhost:8085/api/notifications/000000000000000000000000/read
+
+> {%
+    client.test("Non-existent notification returns 404", function() {
+        client.assert(response.status === 404, "Expected 404 Not Found");
+    });
+%}
+
+###
+
+### 3. Get notifications for the rider from requests/ride_api-gateway.http
+### (run that file first — this reads client.global "riderId" it set)
+GET http://localhost:8085/api/notifications/user/{{riderId}}
+
+> {%
+    client.test("Rider has notifications from the ride lifecycle", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length > 0, "Rider should have at least 1 notification");
+    });
+    const unread = response.body.find(n => n.isRead === false);
+    if (unread) {
+        client.global.set("someNotificationId", unread.id);
+    }
+%}
+
+###
+
+### 4. Get only the rider's unread notifications
+GET http://localhost:8085/api/notifications/user/{{riderId}}/unread
+
+> {%
+    client.test("Unread notifications returned", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.every(n => n.isRead === false), "All returned notifications should be unread");
+    });
+%}
+
+###
+
+### 5. Mark one of the rider's notifications as read
+PUT http://localhost:8085/api/notifications/{{someNotificationId}}/read
+
+> {%
+    client.test("Notification marked as read", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.isRead === true, "isRead should be true");
+    });
+%}
+
+###
+
+### 6. Re-check unread notifications — the one just marked read should be gone
+GET http://localhost:8085/api/notifications/user/{{riderId}}/unread
+
+> {%
+    client.test("Marked notification no longer appears as unread", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        const ids = response.body.map(n => n.id);
+        client.assert(!ids.includes(client.global.get("someNotificationId")), "Read notification should be excluded");
+    });
+%}
