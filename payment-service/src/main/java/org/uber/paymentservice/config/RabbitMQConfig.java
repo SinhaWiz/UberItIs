@@ -1,0 +1,47 @@
+package org.uber.paymentservice.config;
+
+import org.springframework.amqp.core.Binding;
+import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class RabbitMQConfig {
+
+    public static final String EXCHANGE = "uber.exchange";
+    public static final String PAYMENT_QUEUE = "payment.queue";
+    public static final String PAYMENT_COMPLETED_ROUTING_KEY = "payment.completed";
+
+    @Bean
+    public TopicExchange uberExchange() {
+        return new TopicExchange(EXCHANGE);
+    }
+
+    @Bean
+    public Queue paymentQueue() {
+        return new Queue(PAYMENT_QUEUE);
+    }
+
+    @Bean
+    public Binding paymentBinding(Queue paymentQueue, TopicExchange uberExchange) {
+        return BindingBuilder.bind(paymentQueue).to(uberExchange).with(PAYMENT_COMPLETED_ROUTING_KEY);
+    }
+
+    @Bean
+    public MessageConverter jsonMessageConverter() {
+        return new JacksonJsonMessageConverter();
+    }
+
+    @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory, MessageConverter jsonMessageConverter) {
+        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
+        rabbitTemplate.setMessageConverter(jsonMessageConverter);
+        return rabbitTemplate;
+    }
+}
