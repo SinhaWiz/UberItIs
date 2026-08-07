@@ -1,0 +1,126 @@
+### =============================
+### Payment Service API Gateway Tests
+### =============================
+### Prerequisite: API Gateway (8080), user-service, payment-service, and RabbitMQ
+### must be running. Every /api/payments/** route requires a valid JWT.
+### Run these requests sequentially from top to bottom.
+
+### 1. Register a Rider user (via Gateway)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Carol GW Payer",
+  "email": "carol_gw_payment@example.com",
+  "password": "securePass123",
+  "phone": "+8801799999999",
+  "role": "RIDER"
+}
+
+> {%
+    client.test("Rider user registration successful", function() {
+        client.assert(response.status === 201 || response.status === 409, "Expected 201 Created or 409 Conflict");
+    });
+%}
+
+###
+
+### 2. Login as the Rider to get a token (via Gateway)
+POST http://localhost:8080/api/users/login
+Content-Type: application/json
+
+{
+  "email": "carol_gw_payment@example.com",
+  "password": "securePass123"
+}
+
+> {%
+    client.test("Rider login successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.token !== null, "Token should be present");
+    });
+    client.global.set("riderAuthToken", response.body.token);
+    client.global.set("riderId", response.body.user.id);
+%}
+
+###
+
+### 3. Calculate a fare preview (via Gateway)
+POST http://localhost:8080/api/payments/calculate
+Authorization: Bearer {{riderAuthToken}}
+Content-Type: application/json
+
+{
+  "rideId": "preview-ride-gw-1"
+}
+
+> {%
+    client.test("Fare calculated via gateway", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.fare > 0, "Fare should be positive");
+    });
+%}
+
+###
+
+### 4. Process payment for a completed ride (via Gateway)
+POST http://localhost:8080/api/payments/process
+Authorization: Bearer {{riderAuthToken}}
+Content-Type: application/json
+
+{
+  "rideId": "ride-gw-1",
+  "riderId": "{{riderId}}",
+  "driverId": "driver-gw-1"
+}
+
+> {%
+    client.test("Payment processed via gateway", function() {
+        client.assert(response.status === 201, "Expected 201 Created");
+        client.assert(response.body.status === "COMPLETED", "Status should be COMPLETED");
+    });
+    client.global.set("gwPaymentId", response.body.id);
+%}
+
+###
+
+### 5. Get payment by id (via Gateway)
+GET http://localhost:8080/api/payments/{{gwPaymentId}}
+Authorization: Bearer {{riderAuthToken}}
+
+> {%
+    client.test("Get payment via gateway successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+%}
+
+###
+
+### 6. Get the rider's payment history (via Gateway)
+GET http://localhost:8080/api/payments/rider/{{riderId}}
+Authorization: Bearer {{riderAuthToken}}
+
+> {%
+    client.test("Rider payment history via gateway", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.length > 0, "Rider should have at least 1 payment");
+    });
+%}
+
+###
+
+### 7. Attempt to process a payment without a token (should fail, gateway auth filter blocks it)
+POST http://localhost:8080/api/payments/process
+Content-Type: application/json
+
+{
+  "rideId": "ride-gw-2",
+  "riderId": "{{riderId}}",
+  "driverId": "driver-gw-1"
+}
+
+> {%
+    client.test("Unauthenticated request rejected", function() {
+        client.assert(response.status === 401 || response.status === 403, "Expected 401 or 403");
+    });
+%}
