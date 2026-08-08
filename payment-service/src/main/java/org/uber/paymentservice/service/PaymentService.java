@@ -8,6 +8,8 @@ import org.uber.paymentservice.exception.ResourceNotFoundException;
 import org.uber.paymentservice.model.Payment;
 import org.uber.paymentservice.repository.PaymentRepository;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
@@ -50,6 +52,15 @@ public class PaymentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found for rideId: " + rideId));
 
         return toResponse(payment);
+    }
+
+    /**
+     * Returns all payment records for a rider.
+     */
+    public List<PaymentResponse> getPaymentsByRiderId(String riderId) {
+        return paymentRepository.findByRiderId(riderId).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     private PaymentResponse toResponse(Payment payment) {

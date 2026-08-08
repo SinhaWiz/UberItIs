@@ -13,6 +13,8 @@ import org.uber.paymentservice.dto.CalculateFareResponse;
 import org.uber.paymentservice.dto.PaymentResponse;
 import org.uber.paymentservice.service.PaymentService;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor
@@ -36,5 +38,11 @@ public class PaymentController {
     public ResponseEntity<PaymentResponse> getPaymentByRideId(@PathVariable String rideId) {
         PaymentResponse payment = paymentService.getPaymentByRideId(rideId);
         return ResponseEntity.ok(payment);
+    }
+
+    @GetMapping("/rider/{riderId}")
+    public ResponseEntity<List<PaymentResponse>> getPaymentsByRiderId(@PathVariable String riderId) {
+        List<PaymentResponse> payments = paymentService.getPaymentsByRiderId(riderId);
+        return ResponseEntity.ok(payments);
     }
 }
