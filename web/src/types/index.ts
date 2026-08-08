@@ -133,6 +133,25 @@ export interface MatchDriverRequest {
   driverId?: string
 }
 
+/* ---------- notification-service ---------- */
+
+export type NotificationType =
+  | 'RIDE_REQUESTED'
+  | 'RIDE_MATCHED'
+  | 'RIDE_STARTED'
+  | 'RIDE_COMPLETED'
+  | 'RIDE_CANCELLED'
+  | 'PAYMENT_COMPLETED'
+
+export interface AppNotification {
+  id: string
+  userId: string
+  type: NotificationType
+  message: string
+  isRead: boolean
+  createdAt: string
+}
+
 /* ---------- errors ---------- */
 
 /** Flat error body produced by every service's GlobalExceptionHandler. */

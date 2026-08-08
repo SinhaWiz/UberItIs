@@ -1,6 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { isTerminal, type DriverProfile, type Ride, type User } from '../types'
+import {
+  isTerminal,
+  type AppNotification,
+  type DriverProfile,
+  type Ride,
+  type User,
+} from '../types'
 
 /**
  * There is no push channel in the backend, so anything live is polled.
@@ -9,6 +15,7 @@ import { isTerminal, type DriverProfile, type Ride, type User } from '../types'
 export const RIDE_POLL_MS = 4_000
 export const DRIVER_POLL_MS = 5_000
 export const ADMIN_POLL_MS = 10_000
+export const NOTIFICATION_POLL_MS = 15_000
 
 export const queryKeys = {
   ride: (id: string) => ['rides', 'detail', id] as const,
@@ -18,6 +25,7 @@ export const queryKeys = {
   user: (id: string) => ['users', id] as const,
   users: ['users', 'all'] as const,
   driverProfile: (userId: string) => ['drivers', userId] as const,
+  notifications: (userId: string) => ['notifications', userId] as const,
 }
 
 /** Polls a single ride until it reaches a terminal status. */
@@ -83,5 +91,15 @@ export function useDriverProfile(userId: string | null | undefined) {
     enabled: Boolean(userId),
     // A missing profile is a real state (driver hasn't onboarded), not a bug.
     retry: false,
+  })
+}
+
+/** Polled so ride/payment events show up without a manual refresh. */
+export function useNotifications(userId: string | null | undefined) {
+  return useQuery({
+    queryKey: queryKeys.notifications(userId ?? ''),
+    queryFn: () => api.get<AppNotification[]>(`/api/notifications/user/${userId}`),
+    enabled: Boolean(userId),
+    refetchInterval: NOTIFICATION_POLL_MS,
   })
 }

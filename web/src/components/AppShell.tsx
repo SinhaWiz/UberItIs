@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
+import { useNotifications } from '../hooks/queries'
 import { cn } from '../lib/format'
 import type { Role } from '../types'
 
@@ -13,11 +14,13 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   RIDER: [
     { to: '/ride', label: 'Ride' },
     { to: '/ride/history', label: 'History' },
+    { to: '/notifications', label: 'Notifications' },
     { to: '/profile', label: 'Profile' },
   ],
   DRIVER: [
     { to: '/drive', label: 'Drive' },
     { to: '/drive/history', label: 'History' },
+    { to: '/notifications', label: 'Notifications' },
     { to: '/profile', label: 'Profile' },
   ],
   ADMIN: [
@@ -31,10 +34,12 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
 export function AppShell({ wide = false }: { wide?: boolean }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { data: notifications } = useNotifications(user?.id)
 
   if (!user) return null
 
   const items = NAV_BY_ROLE[user.role]
+  const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0
 
   const onSignOut = () => {
     logout()
@@ -79,7 +84,14 @@ export function AppShell({ wide = false }: { wide?: boolean }) {
                 )
               }
             >
-              {item.label}
+              <span className="inline-flex items-center gap-2">
+                {item.label}
+                {item.to === '/notifications' && unreadCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-accent text-on-primary text-xs font-semibold">
+                    {unreadCount}
+                  </span>
+                )}
+              </span>
             </NavLink>
           ))}
         </nav>

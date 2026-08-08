@@ -14,6 +14,7 @@ import { DriverHistoryPage } from './pages/driver/DriverHistoryPage'
 import { DriverHomePage } from './pages/driver/DriverHomePage'
 import { RiderHistoryPage } from './pages/rider/RiderHistoryPage'
 import { RiderHomePage } from './pages/rider/RiderHomePage'
+import { NotificationsPage } from './pages/NotificationsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { RideDetailPage } from './pages/RideDetailPage'
 import { AdminOverviewPage } from './pages/admin/AdminOverviewPage'
@@ -62,6 +63,7 @@ function AppRoutes() {
             <Route path="/drive/history" element={<DriverHistoryPage />} />
           </Route>
 
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/rides/:rideId" element={<RideDetailPage />} />
         </Route>

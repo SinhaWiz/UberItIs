@@ -1,4 +1,4 @@
-import type { RideStatus } from '../types'
+import type { NotificationType, RideStatus } from '../types'
 
 /**
  * Jackson serialises LocalDateTime without a timezone ("2026-08-05T08:15:32").
@@ -55,6 +55,15 @@ export const STATUS_LABEL: Record<RideStatus, string> = {
   IN_PROGRESS: 'On trip',
   COMPLETED: 'Completed',
   CANCELLED: 'Cancelled',
+}
+
+export const NOTIFICATION_LABEL: Record<NotificationType, string> = {
+  RIDE_REQUESTED: 'Ride requested',
+  RIDE_MATCHED: 'Driver matched',
+  RIDE_STARTED: 'Trip started',
+  RIDE_COMPLETED: 'Trip completed',
+  RIDE_CANCELLED: 'Trip cancelled',
+  PAYMENT_COMPLETED: 'Payment',
 }
 
 /** Joins truthy class names. */
