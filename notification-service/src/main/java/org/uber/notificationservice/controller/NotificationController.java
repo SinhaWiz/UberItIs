@@ -15,18 +15,30 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
+    /**
+     * Returns all notifications for a user, newest first.
+     */
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<NotificationResponse>> getUserNotifications(@PathVariable String userId) {
-        return ResponseEntity.ok(notificationService.getUserNotifications(userId));
+    public ResponseEntity<List<NotificationResponse>> getNotifications(@PathVariable String userId) {
+        List<NotificationResponse> notifications = notificationService.getNotificationsByUserId(userId);
+        return ResponseEntity.ok(notifications);
     }
 
+    /**
+     * Returns only unread notifications for a user, newest first.
+     */
     @GetMapping("/user/{userId}/unread")
     public ResponseEntity<List<NotificationResponse>> getUnreadNotifications(@PathVariable String userId) {
-        return ResponseEntity.ok(notificationService.getUnreadNotifications(userId));
+        List<NotificationResponse> notifications = notificationService.getUnreadNotificationsByUserId(userId);
+        return ResponseEntity.ok(notifications);
     }
 
+    /**
+     * Marks a single notification as read.
+     */
     @PutMapping("/{id}/read")
     public ResponseEntity<NotificationResponse> markAsRead(@PathVariable String id) {
-        return ResponseEntity.ok(notificationService.markAsRead(id));
+        NotificationResponse notification = notificationService.markAsRead(id);
+        return ResponseEntity.ok(notification);
     }
 }

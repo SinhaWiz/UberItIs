@@ -76,16 +76,31 @@ public class PaymentService {
     public CreatePaymentIntentResponse createPaymentIntent(CreatePaymentIntentRequest request) {
         validateUserExists(request.getRiderId());
         
-        Double amount = calculateFare(CalculateFareRequest.builder()
-                .rideId(request.getRideId())
-                .riderId(request.getRiderId())
-                .driverId(request.getDriverId())
-                .distance(request.getDistance())
-                .pickupLat(request.getPickupLat())
-                .pickupLng(request.getPickupLng())
-                .dropoffLat(request.getDropoffLat())
-                .dropoffLng(request.getDropoffLng())
-                .build());
+        Double amount = request.getFinalFare();
+        
+        if (amount == null) {
+            try {
+                Map<String, Object> ride = restTemplate.getForObject("http://ride-service/api/rides/" + request.getRideId(), Map.class);
+                if (ride != null && ride.get("finalFare") != null) {
+                    amount = Double.valueOf(ride.get("finalFare").toString());
+                }
+            } catch (Exception e) {
+                // fallback if fetch fails
+            }
+        }
+
+        if (amount == null) {
+            amount = calculateFare(CalculateFareRequest.builder()
+                    .rideId(request.getRideId())
+                    .riderId(request.getRiderId())
+                    .driverId(request.getDriverId())
+                    .distance(request.getDistance())
+                    .pickupLat(request.getPickupLat())
+                    .pickupLng(request.getPickupLng())
+                    .dropoffLat(request.getDropoffLat())
+                    .dropoffLng(request.getDropoffLng())
+                    .build());
+        }
 
         try {
             long amountInCents = Math.round(amount * 100);
@@ -217,7 +232,9 @@ public class PaymentService {
     private void publishPaymentCompleted(Payment payment) {
         PaymentCompletedEvent event = PaymentCompletedEvent.builder()
                 .paymentId(payment.getId())
+                .rideId(payment.getRideId())
                 .riderId(payment.getRiderId())
+                .driverId(payment.getDriverId())
                 .amount(payment.getAmount())
                 .status(payment.getStatus())
                 .timestamp(LocalDateTime.now())

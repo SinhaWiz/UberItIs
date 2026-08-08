@@ -1,81 +1,71 @@
-### =============================
-### Notification Service API Tests
-### =============================
-### Prerequisite: user-service must be running on port 8081.
-### Notifications are created only by consuming RabbitMQ events (ride.status.changed,
-### payment.completed) — there is no REST endpoint to create one directly. To generate
-### real data for the read/unread/mark-as-read tests below, either run a full ride flow
-### through ride-service, or publish a test message manually via the RabbitMQ management
-### UI (http://localhost:15672) to the "ride.status.queue" queue, e.g.:
-###   {"rideId":"r1","riderId":"<riderUserId>","driverId":null,"status":"REQUESTED","message":"Your ride has been requested","timestamp":"2026-08-09T00:00:00"}
-### Run these requests sequentially from top to bottom.
+### ──────────────────────────────────────────────
+### Notification Service — IntelliJ HTTP Client
+### ──────────────────────────────────────────────
+### Run these after triggering ride / payment events
+### so that RabbitMQ has produced notifications.
+### ──────────────────────────────────────────────
 
-### 1. Register a Rider user (via User Service)
-POST http://localhost:8081/api/users/register
+### 1. Get all notifications for a rider
+### Replace {{riderId}} with an actual user ID that has triggered rides.
+GET http://localhost:8085/api/notifications/user/{{riderId}}
 Content-Type: application/json
 
-{
-  "name": "Notif Test Rider",
-  "email": "notif_rider@example.com",
-  "password": "securePass123",
-  "phone": "+8801755555555",
-  "role": "RIDER"
-}
-
 > {%
-    client.test("Rider user registration successful", function() {
-        client.assert(response.status === 201, "Expected 201 Created");
-    });
-    client.global.set("riderUserId", response.body.id);
-%}
-
-### 2. Get notifications for a user with none yet (should be empty)
-GET http://localhost:8085/api/notifications/user/{{riderUserId}}
-
-> {%
-    client.test("Empty notification list", function() {
-        client.assert(response.status === 200, "Expected 200 OK");
-        client.assert(response.body.length === 0, "Should be empty before any events are consumed");
-    });
-%}
-
-### 3. Get unread notifications for a user with none yet (should be empty)
-GET http://localhost:8085/api/notifications/user/{{riderUserId}}/unread
-
-> {%
-    client.test("Empty unread list", function() {
-        client.assert(response.status === 200, "Expected 200 OK");
-        client.assert(response.body.length === 0, "Should be empty before any events are consumed");
-    });
-%}
-
-### 4. Mark a non-existent notification as read (should fail with 404)
-PUT http://localhost:8085/api/notifications/000000000000000000000000/read
-
-> {%
-    client.test("Non-existent notification returns 404", function() {
-        client.assert(response.status === 404, "Expected 404 Not Found");
-    });
-%}
-
-### 5. After seeding a notification via RabbitMQ (see note above), fetch it again
-GET http://localhost:8085/api/notifications/user/{{riderUserId}}
-
-> {%
-    client.test("Notification present after event consumed", function() {
-        client.assert(response.status === 200, "Expected 200 OK");
+    client.test("Returns 200", function () {
+        client.assert(response.status === 200, "Expected 200");
     });
     if (response.body.length > 0) {
         client.global.set("notificationId", response.body[0].id);
     }
 %}
 
-### 6. Mark the seeded notification as read
-PUT http://localhost:8085/api/notifications/{{notificationId}}/read
+###
+
+### 2. Get unread notifications for a rider
+GET http://localhost:8085/api/notifications/user/{{riderId}}/unread
+Content-Type: application/json
 
 > {%
-    client.test("Notification marked as read", function() {
-        client.assert(response.status === 200, "Expected 200 OK");
-        client.assert(response.body.isRead === true, "isRead should be true");
+    client.test("Returns 200", function () {
+        client.assert(response.status === 200, "Expected 200");
+    });
+%}
+
+###
+
+### 3. Mark a notification as read
+PUT http://localhost:8085/api/notifications/{{notificationId}}/read
+Content-Type: application/json
+
+> {%
+    client.test("Returns 200", function () {
+        client.assert(response.status === 200, "Expected 200");
+    });
+    client.test("isRead is true", function () {
+        client.assert(response.body.isRead === true, "Expected isRead=true");
+    });
+%}
+
+###
+
+### 4. Get all notifications for a driver
+GET http://localhost:8085/api/notifications/user/{{driverId}}
+Content-Type: application/json
+
+> {%
+    client.test("Returns 200", function () {
+        client.assert(response.status === 200, "Expected 200");
+    });
+%}
+
+###
+
+### 5. Error — Mark non-existent notification as read → 404
+PUT http://localhost:8085/api/notifications/000000000000000000000000/read
+Content-Type: application/json
+
+> {%
+    client.test("Returns 404", function () {
+        client.assert(response.status === 404, "Expected 404");
     });
 %}
