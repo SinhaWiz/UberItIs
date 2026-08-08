@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '../../components/Button'
 import { Card, CardRow } from '../../components/Card'
@@ -22,6 +22,15 @@ interface ActiveRideProps {
   onDismiss: () => void
 }
 
+/**
+ * Helper: does this ride require payment before the rider can move on?
+ */
+function needsPayment(ride: Ride | undefined): boolean {
+  if (!ride) return false
+  const finished = ride.status === 'COMPLETED'
+  return finished && !ride.isPaid && !!ride.finalFare && ride.finalFare > 0
+}
+
 export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
   usePageTitle('Your ride')
   const queryClient = useQueryClient()
@@ -29,6 +38,9 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
   const [confirmingCancel, setConfirmingCancel] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
   const [paymentIntent, setPaymentIntent] = useState<CreatePaymentIntentResponse | null>(null)
+  const [localPaid, setLocalPaid] = useState(false)
+  // Track whether we already attempted to initiate payment (prevents re-fire loops)
+  const paymentInitiatedRef = useRef(false)
 
   const { data: ride, isLoading } = useRide(rideId)
 
@@ -36,6 +48,36 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
     queryClient.setQueryData(queryKeys.ride(rideId), updated)
     queryClient.invalidateQueries({ queryKey: queryKeys.ridesByRider(riderId) })
   }
+
+  /**
+   * Directly calls the create-intent API with a given ride object.
+   * This avoids stale-closure issues by accepting the ride as a parameter.
+   */
+  const doInitiatePayment = useCallback(
+    async (forRide: Ride) => {
+      if (paymentInitiatedRef.current) return
+      paymentInitiatedRef.current = true
+      try {
+        const res = await api.post<CreatePaymentIntentResponse>('/api/payments/create-intent', {
+          rideId: forRide.id,
+          riderId: forRide.riderId,
+          driverId: forRide.driverId,
+          pickupLat: forRide.pickupLat,
+          pickupLng: forRide.pickupLng,
+          dropoffLat: forRide.dropoffLat,
+          dropoffLng: forRide.dropoffLng,
+          finalFare: forRide.finalFare,
+        })
+        setPaymentIntent(res)
+        setShowPayment(true)
+      } catch (caught) {
+        notify(caught instanceof ApiError ? caught.message : 'Could not initiate payment', 'error')
+        // Allow retry
+        paymentInitiatedRef.current = false
+      }
+    },
+    [notify],
+  )
 
   const cancelRide = useMutation({
     mutationFn: () => api.put<Ride>(`/api/rides/${rideId}/cancel`),
@@ -71,40 +113,34 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
     }
   }, [ride, findDriver.isPending, findDriver.mutate])
 
-  const initiatePayment = useMutation({
-    mutationFn: () =>
-      api.post<CreatePaymentIntentResponse>('/api/payments/create-intent', {
-        rideId: ride?.id,
-        riderId: ride?.riderId,
-        driverId: ride?.driverId,
-        pickupLat: ride?.pickupLat,
-        pickupLng: ride?.pickupLng,
-        dropoffLat: ride?.dropoffLat,
-        dropoffLng: ride?.dropoffLng,
-      }),
-    onSuccess: (res) => {
-      setPaymentIntent(res)
-      setShowPayment(true)
-    },
-    onError: (caught) => {
-      notify(caught instanceof ApiError ? caught.message : 'Could not initiate payment', 'error')
-    },
-  })
+  // Optimistically treat the ride as paid if we just succeeded locally
+  const requiresPayment = needsPayment(ride) && !localPaid
+
+  /**
+   * Auto-trigger payment when ride finishes with an unpaid fare.
+   * This handles the COMPLETED case (detected via polling) and also
+   * serves as a fallback for CANCELLED (primary trigger is in cancelRide.onSuccess).
+   *
+   * IMPORTANT: This hook is BEFORE any conditional returns to satisfy the Rules of Hooks.
+   */
+  useEffect(() => {
+    if (ride && requiresPayment && !showPayment && !paymentInitiatedRef.current && !paymentIntent) {
+      doInitiatePayment(ride)
+    }
+  }, [ride, requiresPayment, showPayment, paymentIntent, doInitiatePayment])
+
+  // Reset the payment initiated ref when ride changes to a new non-terminal ride
+  useEffect(() => {
+    if (ride && !needsPayment(ride) && ride.status !== 'COMPLETED' && ride.status !== 'CANCELLED') {
+      paymentInitiatedRef.current = false
+    }
+  }, [ride])
 
   if (isLoading || !ride) {
     return <SkeletonCard />
   }
 
   const finished = ride.status === 'COMPLETED' || ride.status === 'CANCELLED'
-  
-  useEffect(() => {
-    if (finished && !ride.isPaid && ride.finalFare && ride.finalFare > 0) {
-      if (!showPayment && !initiatePayment.isPending && !paymentIntent) {
-        initiatePayment.mutate()
-      }
-    }
-  }, [finished, ride.isPaid, ride.finalFare, showPayment, initiatePayment.isPending, paymentIntent, initiatePayment.mutate])
-
   const waitingForDriver = ride.status === 'REQUESTED' && !ride.driverId
 
   return (
@@ -117,7 +153,7 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
           <p className="text-sm text-muted">
             {finished
               ? 'This trip has ended.'
-              : 'We’ll keep this up to date automatically.'}
+              : 'We\u2019ll keep this up to date automatically.'}
           </p>
         </div>
         <StatusPill status={ride.status} />
@@ -169,12 +205,15 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
         )}
 
         {finished ? (
-          !ride.isPaid && ride.finalFare && ride.finalFare > 0 ? (
+          requiresPayment ? (
             <Button
               fullWidth
               size="lg"
-              loading={initiatePayment.isPending}
-              onClick={() => initiatePayment.mutate()}
+              loading={paymentInitiatedRef.current && !paymentIntent}
+              onClick={() => {
+                paymentInitiatedRef.current = false // allow retry
+                doInitiatePayment(ride)
+              }}
             >
               Pay Now
             </Button>
@@ -197,11 +236,7 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
       <Modal
         open={confirmingCancel}
         title="Cancel this ride?"
-        description={
-          ride.driverId
-            ? 'Your driver will be released and this trip will be marked cancelled.'
-            : 'This trip will be marked cancelled.'
-        }
+        description="This trip will be marked as cancelled. You will not be charged."
         confirmLabel="Cancel ride"
         cancelLabel="Keep ride"
         destructive
@@ -213,9 +248,12 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
       {ride && paymentIntent && (
         <PaymentModal
           isOpen={showPayment}
-          onClose={() => setShowPayment(false)}
+          onClose={() => {}} // Cannot be dismissed — payment is mandatory
           onSuccess={() => {
             setShowPayment(false)
+            setPaymentIntent(null)
+            setLocalPaid(true)
+            queryClient.invalidateQueries({ queryKey: queryKeys.ride(rideId) })
             queryClient.invalidateQueries({ queryKey: queryKeys.ridesByRider(riderId) })
             notify('Payment successful!', 'success')
           }}

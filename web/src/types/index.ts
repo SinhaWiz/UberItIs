@@ -23,10 +23,7 @@ export const ACTIVE_STATUSES: RideStatus[] = [
 
 export function isTerminal(ride: Pick<Ride, 'status' | 'isPaid' | 'finalFare'>): boolean {
   if (ride.status === 'COMPLETED' && ride.isPaid) return true
-  if (ride.status === 'CANCELLED') {
-    if (ride.finalFare && ride.finalFare > 0 && !ride.isPaid) return false
-    return true
-  }
+  if (ride.status === 'CANCELLED') return true
   return false
 }
 

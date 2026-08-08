@@ -14,6 +14,8 @@ import {
   useDriverProfile,
   useRidesByDriver,
   useNotifications,
+  useUser,
+  useRide,
 } from '../../hooks/queries'
 import { Modal } from '../../components/Modal'
 import { ApiError, api } from '../../lib/api'
@@ -28,6 +30,74 @@ import { MapPin } from 'lucide-react'
 function findAssignedRide(rides: Ride[] | undefined): Ride | undefined {
   return rides?.find(
     (ride) => ride.status === 'MATCHED' || ride.status === 'IN_PROGRESS',
+  )
+}
+
+function RideRequestModal({
+  rideId,
+  notificationMessage,
+  onAccept,
+  onReject,
+  isPending,
+}: {
+  rideId: string
+  notificationMessage: string
+  onAccept: () => void
+  onReject: () => void
+  isPending: boolean
+}) {
+  const { data: ride, isLoading: rideLoading } = useRide(rideId)
+  const { data: rider, isLoading: riderLoading } = useUser(ride?.riderId)
+
+  return (
+    <Modal
+      open={true}
+      title="New Ride Request!"
+      description="A rider is waiting for you."
+      confirmLabel="Accept"
+      cancelLabel="Reject"
+      onConfirm={onAccept}
+      onCancel={onReject}
+      loading={isPending}
+    >
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-ink font-medium">{notificationMessage}</p>
+        
+        {rideLoading || riderLoading ? (
+          <div className="animate-pulse flex flex-col gap-2">
+            <div className="h-4 bg-line rounded w-3/4"></div>
+            <div className="h-4 bg-line rounded w-1/2"></div>
+            <div className="h-4 bg-line rounded w-5/6"></div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 p-3 bg-canvas rounded-lg border border-line">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-xs text-muted font-medium uppercase tracking-wider mb-0.5">Rider</p>
+                <p className="text-sm text-ink font-semibold">{rider?.name}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted font-medium uppercase tracking-wider mb-0.5">Phone</p>
+                <p className="text-sm text-ink">{rider?.phone}</p>
+              </div>
+            </div>
+            
+            <div className="h-px bg-line w-full"></div>
+            
+            <div className="flex flex-col gap-2">
+              <div>
+                <p className="text-xs text-muted font-medium uppercase tracking-wider mb-0.5">Pickup</p>
+                <p className="text-sm text-ink leading-snug">{ride?.pickupLocation}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted font-medium uppercase tracking-wider mb-0.5">Dropoff</p>
+                <p className="text-sm text-ink leading-snug">{ride?.dropoffLocation}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
   )
 }
 
@@ -291,18 +361,13 @@ export function DriverHomePage() {
       </Card>
 
       {rideRequestNotification && rideRequestNotification.relatedId && (
-        <Modal
-          open={true}
-          title="New Ride Request!"
-          description="A rider is waiting for you."
-          confirmLabel="Accept"
-          cancelLabel="Reject"
-          onConfirm={() => acceptRide.mutate(rideRequestNotification.relatedId!)}
-          onCancel={() => rejectRide.mutate(rideRequestNotification.relatedId!)}
-          loading={acceptRide.isPending || rejectRide.isPending}
-        >
-          <p className="text-sm text-ink">{rideRequestNotification.message}</p>
-        </Modal>
+        <RideRequestModal
+          rideId={rideRequestNotification.relatedId}
+          notificationMessage={rideRequestNotification.message}
+          onAccept={() => acceptRide.mutate(rideRequestNotification.relatedId!)}
+          onReject={() => rejectRide.mutate(rideRequestNotification.relatedId!)}
+          isPending={acceptRide.isPending || rejectRide.isPending}
+        />
       )}
 
       {cancelledNotification && (
