@@ -32,8 +32,8 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public Binding rideStatusBinding(Queue rideStatusQueue, TopicExchange uberExchange) {
-        return BindingBuilder.bind(rideStatusQueue).to(uberExchange).with(RIDE_STATUS_ROUTING_KEY);
+    public Binding rideStatusBinding() {
+        return BindingBuilder.bind(rideStatusQueue()).to(uberExchange()).with(RIDE_STATUS_ROUTING_KEY);
     }
 
     @Bean
@@ -42,8 +42,8 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public Binding paymentBinding(Queue paymentQueue, TopicExchange uberExchange) {
-        return BindingBuilder.bind(paymentQueue).to(uberExchange).with(PAYMENT_COMPLETED_ROUTING_KEY);
+    public Binding paymentBinding() {
+        return BindingBuilder.bind(paymentQueue()).to(uberExchange()).with(PAYMENT_COMPLETED_ROUTING_KEY);
     }
 
     @Bean
