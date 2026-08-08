@@ -14,7 +14,8 @@ The `Payment` entity stores the following fields in the `payments` collection wi
 | `driverId` | String | Indexed, references the driver user ID |
 | `amount` | Double | Calculated fare amount |
 | `status` | Enum | `PENDING`, `COMPLETED`, `FAILED`, `REFUNDED` (defaults to `PENDING`) |
-| `paymentMethod` | String | Defaults to `CASH` |
+| `paymentMethod` | String | Defaults to `CARD` when processed via Stripe |
+| `stripePaymentIntentId` | String | Nullable, stores the ID of the Stripe PaymentIntent for traceability |
 | `createdAt` | LocalDateTime | Auto-set via `@CreatedDate` |
 | `completedAt` | LocalDateTime | Set when payment is processed |
 | `updatedAt` | LocalDateTime | Auto-set via `@LastModifiedDate` |
@@ -24,7 +25,9 @@ The `Payment` entity stores the following fields in the `payments` collection wi
 | Method | Endpoint | Description | Status Codes |
 |--------|----------|-------------|--------------|
 | POST | `/api/payments/calculate` | Calculate the fare for a ride | 200, 400 |
-| POST | `/api/payments/process` | Process and store a completed ride payment | 200, 400 |
+| POST | `/api/payments/create-intent` | Calculate fare and create a Stripe PaymentIntent | 200, 400 |
+| POST | `/api/payments/process` | Verify Stripe PaymentIntent and store completed payment | 200, 400 |
+| GET | `/api/payments/config` | Get the Stripe Public Key for the frontend | 200 |
 | GET | `/api/payments/{id}` | Get payment details by payment id | 200, 404 |
 | GET | `/api/payments/ride/{rideId}` | Get payment details for a ride | 200, 404 |
 | GET | `/api/payments/rider/{riderId}` | Get payment history for a rider | 200 |
@@ -36,15 +39,18 @@ org.uber.paymentservice
 ├── PaymentServiceApplication.java      # Spring Boot entry point
 ├── config/
 │   ├── MongoConfig.java                # @EnableMongoAuditing
+│   ├── StripeConfig.java               # Configures stripe-java with secret key
 │   └── RabbitMQConfig.java             # Exchange, queue, binding, RabbitTemplate
 ├── controller/
 │   └── PaymentController.java          # REST endpoints
 ├── dto/
 │   ├── CalculateFareRequest.java       # Input for fare calculation
 │   ├── CalculateFareResponse.java      # Fare response wrapper
+│   ├── CreatePaymentIntentRequest.java # Input for intent creation
+│   ├── CreatePaymentIntentResponse.java# Output with clientSecret
 │   ├── PaymentCompletedEvent.java      # RabbitMQ event payload
 │   ├── PaymentResponse.java            # Output DTO for payment lookups
-│   └── ProcessPaymentRequest.java      # Input for payment processing
+│   └── ProcessPaymentRequest.java      # Input for payment processing (requires paymentIntentId)
 ├── exception/
 │   ├── GlobalExceptionHandler.java     # Centralized error handling
 │   └── ResourceNotFoundException.java  # 404 errors
@@ -61,19 +67,21 @@ org.uber.paymentservice
 
 1. **DTOs for request/response separation:** Controllers return `PaymentResponse` and never expose the `Payment` entity directly.
 
-2. **Single source of fare logic:** Both `calculate` and `process` use the same simplified `baseFare + distance × perKmRate` formula so the payment amount stays consistent.
+2. **Single source of fare logic (Haversine):** Both `calculate`, `createPaymentIntent` and `processPayment` use the same formula: `baseFare (200.0) + distance × perKmRate (30.0)`. If `distance` is not provided explicitly, the service calculates it using the Haversine formula based on pickup and dropoff coordinates.
 
-3. **Payment completion event:** `processPayment` saves the payment first, then publishes `payment.completed` to the shared `uber.exchange` topic exchange for the Notification Service to consume later.
+3. **Stripe Integration (Sandbox):** The service integrates with Stripe via `stripe-java`. `createPaymentIntent` creates an intent on Stripe and returns the `clientSecret` to the frontend. `processPayment` verifies that the `PaymentIntent` has a `succeeded` status before saving the payment record to MongoDB.
 
-4. **JSON RabbitMQ messages:** `RabbitMQConfig` uses `JacksonJsonMessageConverter` so the event is serialized as JSON instead of Java objects.
+4. **Payment completion event:** `processPayment` saves the payment first, then publishes `payment.completed` to the shared `uber.exchange` topic exchange for the Notification Service to consume later.
 
-5. **Simple state model:** A processed payment is stored as `COMPLETED` immediately because the project treats payment processing as simulated, not a multi-step external gateway integration.
+5. **JSON RabbitMQ messages:** `RabbitMQConfig` uses `JacksonJsonMessageConverter` so the event is serialized as JSON instead of Java objects.
+
+6. **Simple state model:** A processed payment is stored as `COMPLETED` immediately assuming the Stripe intent was successful.
 
 ## What Remains / Stubs
 
 | Item | Status | Notes |
 |------|--------|-------|
-| External payment gateway | **Not Implemented** | Payment is simulated locally; no third-party processor is called. |
+| External payment gateway | **Implemented (Sandbox)** | Payment integrates with Stripe via `stripe-java`. Real charges are not made (sandbox mode). |
 | Payment retries / failure workflow | **Not Implemented** | `FAILED` and `REFUNDED` exist in the enum but are not yet used by any endpoint. |
 | Notification Service consumer | **Not Implemented** | `payment.completed` is published, but the consumer service is still a skeleton. |
 | Input validation annotations | **Basic only** | Negative and missing distance are checked manually; no Bean Validation annotations are used. |

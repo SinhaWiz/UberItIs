@@ -13,6 +13,10 @@ The `Ride` entity stores the following fields in the `rides` collection within `
 | `driverId` | String | Indexed, nullable until matched |
 | `pickupLocation` | String | Free-text location |
 | `dropoffLocation` | String | Free-text location |
+| `pickupLat` | Double | Latitude of pickup |
+| `pickupLng` | Double | Longitude of pickup |
+| `dropoffLat` | Double | Latitude of dropoff |
+| `dropoffLng` | Double | Longitude of dropoff |
 | `status` | Enum | `REQUESTED`, `MATCHED`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`. Defaults to `REQUESTED` |
 | `fareEstimate` | Double | Set at request time (currently a flat placeholder) |
 | `finalFare` | Double | Nullable until completed |
@@ -71,7 +75,7 @@ org.uber.rideservice
 
 2. **Rider validation:** `requestRide` calls `GET http://user-service/api/users/{riderId}` via a `@LoadBalanced RestTemplate` to confirm the rider exists before creating a ride, mirroring `DriverService.validateUserExists`. A failed lookup throws `ResourceNotFoundException` (404).
 
-3. **Fare estimate is a flat placeholder:** `fareEstimate` is set to a flat base fare (`50.0`) at request time rather than computing a real distance-based fare. Real fare calculation belongs to Payment Service (per report.md §5.3.4's formula, `baseFare + distance × perKmRate`) and duplicating that logic here would create two sources of truth. `finalFare` on completion currently just copies `fareEstimate` — see the Payment Service stub below.
+3. **Fare calculation delegates to Payment Service:** `fareEstimate` and `finalFare` are retrieved by calling `POST http://payment-service/api/payments/calculate` with the ride's coordinates, preventing duplicated business logic. A fallback of `200.0` is used if the Payment Service is unreachable or coordinates are missing.
 
 4. **Driver matching strategy:** `matchDriver` accepts an optional `driverId` in the request body for explicit selection. If omitted, it calls `GET http://driver-service/api/drivers/available` and picks the first driver in the list. `RideRequest` was extended with optional `pickupLat`/`pickupLng` fields (not required, unused by the current matching logic) so that a future iteration can call driver-service's existing `GET /api/drivers/nearby` endpoint for real proximity-based matching without further schema changes.
 
@@ -79,7 +83,7 @@ org.uber.rideservice
 
 6. **State machine enforced in the service layer:** Each transition method checks the ride's current `status` before proceeding and throws `InvalidStateException` (409) on an illegal transition — e.g. starting a ride that isn't `MATCHED`, completing a ride that isn't `IN_PROGRESS`, or cancelling a ride that's already `COMPLETED`/`CANCELLED`. This keeps the lifecycle rules centralized rather than scattered across the controller.
 
-7. **Payment Service stub:** Payment Service is not implemented yet. `completeRide`'s `processPayment` method is a documented placeholder (see the TODO comment block in `RideService.java`) that currently skips any network call and returns `fareEstimate` as `finalFare`. It documents the target endpoint (`POST http://payment-service/api/payments/process`), expected request/response shape, and what to replace once Payment Service exists.
+7. **Payment Service Integration for calculation:** While the actual stripe intent creation and payment confirmation (via `POST /api/payments/process`) is handled entirely by the rider's frontend, `completeRide` and `requestRide` call `calculateFare` via Payment Service to keep the `fareEstimate` and `finalFare` fields in sync with the real distance-based cost.
 
 8. **RabbitMQ publish-only:** `publishRideStatusChanged` sends a `RideStatusChangedEvent` to the `uber.exchange` topic exchange with routing key `ride.status.changed` on every transition (request, match, start, complete, cancel). `RabbitMQConfig` also declares the `ride.status.queue` and its binding so the queue exists even though Notification Service (the eventual consumer) isn't implemented yet. `JacksonJsonMessageConverter` is configured explicitly so events serialize as JSON rather than Java-serialized objects.
 
@@ -91,8 +95,7 @@ org.uber.rideservice
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Payment Service integration | **Stubbed** | `processPayment` skips the network call and returns `fareEstimate` as `finalFare`. Replace with a real `POST /api/payments/process` call once Payment Service is implemented. |
-| Real distance-based fare calculation | **Not Implemented** | `fareEstimate` is a flat `50.0` placeholder; no geocoding/distance calculation exists. |
+| Stripe Integration | **Frontend Delegated** | `RideService` asks for fare calculation from `PaymentService`, but the actual Stripe intent handling is driven by the frontend. |
 | Real geospatial driver matching | **Not Implemented** | `matchDriver` picks the first available driver. `pickupLat`/`pickupLng` exist on `RideRequest` but aren't yet wired to driver-service's `/api/drivers/nearby` endpoint. |
 | Notification Service consumption | **Not Implemented** | `ride.status.changed` events are published to `ride.status.queue`, but no consumer exists yet. |
 | Input validation | **Basic only** | No `@Valid` / `@NotBlank` annotations, consistent with User Service and Driver Service. |
