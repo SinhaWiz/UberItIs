@@ -1,0 +1,84 @@
+### =============================
+### Notification Service API Gateway Tests
+### =============================
+### Prerequisite: API Gateway (8080) must be running, which routes to user-service and
+### notification-service. See requests/notification.http for how to seed a real
+### notification via RabbitMQ before running requests 5-6 below.
+### Run these requests sequentially from top to bottom.
+
+### 1. Register a Rider user (via Gateway)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Notif GW Rider",
+  "email": "notif_gw_rider@example.com",
+  "password": "securePass123",
+  "phone": "+8801766666666",
+  "role": "RIDER"
+}
+
+> {%
+    client.test("Rider user registration successful", function() {
+        client.assert(response.status === 201 || response.status === 409, "Expected 201 Created or 409 Conflict");
+    });
+    if (response.status === 201) {
+        client.global.set("riderUserId", response.body.id);
+    }
+%}
+
+###
+
+### 2. Login as the Rider to get token (via Gateway)
+POST http://localhost:8080/api/users/login
+Content-Type: application/json
+
+{
+  "email": "notif_gw_rider@example.com",
+  "password": "securePass123"
+}
+
+> {%
+    client.test("Login successful", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.token !== null, "Token should be present");
+    });
+    client.global.set("riderAuthToken", response.body.token);
+    client.global.set("riderUserId", response.body.user.id);
+%}
+
+###
+
+### 3. Get notifications for the rider (via Gateway, should be empty)
+GET http://localhost:8080/api/notifications/user/{{riderUserId}}
+Authorization: Bearer {{riderAuthToken}}
+
+> {%
+    client.test("Empty notification list", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+%}
+
+###
+
+### 4. Get unread notifications for the rider (via Gateway, should be empty)
+GET http://localhost:8080/api/notifications/user/{{riderUserId}}/unread
+Authorization: Bearer {{riderAuthToken}}
+
+> {%
+    client.test("Empty unread list", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+%}
+
+###
+
+### 5. Mark a non-existent notification as read (via Gateway, should fail with 404)
+PUT http://localhost:8080/api/notifications/000000000000000000000000/read
+Authorization: Bearer {{riderAuthToken}}
+
+> {%
+    client.test("Non-existent notification returns 404", function() {
+        client.assert(response.status === 404, "Expected 404 Not Found");
+    });
+%}
