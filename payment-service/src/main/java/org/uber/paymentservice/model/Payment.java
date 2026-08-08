@@ -42,6 +42,8 @@ public class Payment {
     @CreatedDate
     private LocalDateTime createdAt;
 
+    private String stripePaymentIntentId;
+
     private LocalDateTime completedAt;
 
     @LastModifiedDate

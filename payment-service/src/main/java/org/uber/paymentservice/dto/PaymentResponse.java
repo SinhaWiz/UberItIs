@@ -21,6 +21,7 @@ public class PaymentResponse {
     private Double amount;
     private PaymentStatus status;
     private String paymentMethod;
+    private String stripePaymentIntentId;
     private LocalDateTime createdAt;
     private LocalDateTime completedAt;
     private LocalDateTime updatedAt;

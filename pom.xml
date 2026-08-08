@@ -41,6 +41,11 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>com.stripe</groupId>
+                <artifactId>stripe-java</artifactId>
+                <version>28.2.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

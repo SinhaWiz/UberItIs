@@ -9,11 +9,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProcessPaymentRequest {
+public class CreatePaymentIntentResponse {
 
-    private String rideId;
-    private String riderId;
-    private String driverId;
-    private Double distance;
-    private String paymentIntentId;
+    private String clientSecret;
+    private Double amount;
 }

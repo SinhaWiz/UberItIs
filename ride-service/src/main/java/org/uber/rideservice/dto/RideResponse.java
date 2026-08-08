@@ -19,6 +19,10 @@ public class RideResponse {
     private String driverId;
     private String pickupLocation;
     private String dropoffLocation;
+    private Double pickupLat;
+    private Double pickupLng;
+    private Double dropoffLat;
+    private Double dropoffLng;
     private RideStatus status;
     private Double fareEstimate;
     private Double finalFare;

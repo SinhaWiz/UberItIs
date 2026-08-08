@@ -14,4 +14,6 @@ public class RideRequest {
     private String dropoffLocation;
     private Double pickupLat;
     private Double pickupLng;
+    private Double dropoffLat;
+    private Double dropoffLng;
 }
