@@ -103,6 +103,10 @@ export interface Ride {
   driverId: string | null
   pickupLocation: string
   dropoffLocation: string
+  pickupLat?: number
+  pickupLng?: number
+  dropoffLat?: number
+  dropoffLng?: number
   status: RideStatus
   fareEstimate: number | null
   finalFare: number | null
@@ -110,6 +114,11 @@ export interface Ride {
   matchedAt: string | null
   startedAt: string | null
   completedAt: string | null
+}
+
+export interface CreatePaymentIntentResponse {
+  clientSecret: string
+  amount: number
 }
 
 export interface RideRequestBody {

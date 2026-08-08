@@ -4,16 +4,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import org.uber.paymentservice.dto.CalculateFareRequest;
 import org.uber.paymentservice.dto.CalculateFareResponse;
+import org.uber.paymentservice.dto.CreatePaymentIntentRequest;
+import org.uber.paymentservice.dto.CreatePaymentIntentResponse;
 import org.uber.paymentservice.dto.PaymentResponse;
 import org.uber.paymentservice.dto.ProcessPaymentRequest;
 import org.uber.paymentservice.service.PaymentService;
+import org.uber.paymentservice.config.StripeConfig;
+import java.util.Map;
 
 import java.util.List;
 
@@ -23,6 +26,18 @@ import java.util.List;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final StripeConfig stripeConfig;
+
+    @GetMapping("/config")
+    public ResponseEntity<Map<String, String>> getConfig() {
+        return ResponseEntity.ok(Map.of("publicKey", stripeConfig.getPublicKey()));
+    }
+
+    @PostMapping("/create-intent")
+    public ResponseEntity<CreatePaymentIntentResponse> createPaymentIntent(@RequestBody CreatePaymentIntentRequest request) {
+        CreatePaymentIntentResponse response = paymentService.createPaymentIntent(request);
+        return ResponseEntity.ok(response);
+    }
 
     @PostMapping("/calculate")
     public ResponseEntity<CalculateFareResponse> calculateFare(@RequestBody CalculateFareRequest request) {

@@ -14,5 +14,9 @@ public class CreatePaymentIntentRequest {
     private String rideId;
     private String riderId;
     private String driverId;
-    private Double distance;
+    private Double distance; // optional, legacy
+    private Double pickupLat;
+    private Double pickupLng;
+    private Double dropoffLat;
+    private Double dropoffLng;
 }
