@@ -3,6 +3,7 @@ package org.uber.notificationservice.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.uber.notificationservice.dto.NotificationResponse;
+import org.uber.notificationservice.exception.ResourceNotFoundException;
 import org.uber.notificationservice.model.Notification;
 import org.uber.notificationservice.model.NotificationType;
 import org.uber.notificationservice.repository.NotificationRepository;
@@ -34,6 +35,21 @@ public class NotificationService {
         return notificationRepository.findByUserId(userId).stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    public List<NotificationResponse> getUnreadNotifications(String userId) {
+        return notificationRepository.findByUserIdAndIsReadFalse(userId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    public NotificationResponse markAsRead(String id) {
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification not found with id: " + id));
+
+        notification.setIsRead(true);
+        Notification updated = notificationRepository.save(notification);
+        return toResponse(updated);
     }
 
     private NotificationResponse toResponse(Notification notification) {
