@@ -15,6 +15,8 @@ import org.uber.paymentservice.repository.PaymentRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import org.springframework.web.client.RestTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +27,7 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final RabbitTemplate rabbitTemplate;
+    private final RestTemplate restTemplate;
 
     /**
      * Calculates the ride fare using the report's simplified formula.
@@ -52,6 +55,9 @@ public class PaymentService {
         if (request.getDistance() < 0) {
             throw new IllegalArgumentException("Distance cannot be negative");
         }
+
+        validateUserExists(request.getRiderId());
+        validateUserExists(request.getDriverId());
 
         double amount = calculateFare(CalculateFareRequest.builder()
                 .rideId(request.getRideId())
@@ -139,5 +145,20 @@ public class PaymentService {
                 .build();
 
         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.PAYMENT_COMPLETED_ROUTING_KEY, event);
+    }
+
+    private void validateUserExists(String userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID is required");
+        }
+        try {
+            restTemplate.getForEntity(
+                    "http://user-service/api/users/{id}",
+                    Map.class,
+                    userId
+            );
+        } catch (Exception e) {
+            throw new ResourceNotFoundException("User not found with id: " + userId + " - Details: " + e.getMessage());
+        }
     }
 }
