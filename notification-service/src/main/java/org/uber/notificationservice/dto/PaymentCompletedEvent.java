@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 public class PaymentCompletedEvent {
 
     private String paymentId;
+    private String rideId;
     private String riderId;
     private String driverId;
     private Double amount;

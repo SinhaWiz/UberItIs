@@ -217,6 +217,7 @@ public class PaymentService {
     private void publishPaymentCompleted(Payment payment) {
         PaymentCompletedEvent event = PaymentCompletedEvent.builder()
                 .paymentId(payment.getId())
+                .rideId(payment.getRideId())
                 .riderId(payment.getRiderId())
                 .driverId(payment.getDriverId())
                 .amount(payment.getAmount())

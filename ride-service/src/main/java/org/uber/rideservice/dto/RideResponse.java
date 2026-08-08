@@ -27,6 +27,7 @@ public class RideResponse {
     private RideStatus status;
     private Double fareEstimate;
     private Double finalFare;
+    private Boolean isPaid;
     private LocalDateTime requestedAt;
     private LocalDateTime matchedAt;
     private LocalDateTime startedAt;

@@ -51,6 +51,9 @@ public class Ride {
 
     private Double finalFare;
 
+    @Builder.Default
+    private Boolean isPaid = false;
+
     @CreatedDate
     private LocalDateTime requestedAt;
 

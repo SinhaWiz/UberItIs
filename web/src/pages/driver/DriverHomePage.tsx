@@ -13,7 +13,9 @@ import {
   queryKeys,
   useDriverProfile,
   useRidesByDriver,
+  useNotifications,
 } from '../../hooks/queries'
+import { Modal } from '../../components/Modal'
 import { ApiError, api } from '../../lib/api'
 import type { DriverProfile, Ride } from '../../types'
 import { LocationPicker } from '../../components/LocationPicker'
@@ -43,6 +45,50 @@ export function DriverHomePage() {
 
   const { data: rides } = useRidesByDriver(user.id, true)
   const assignedRide = findAssignedRide(rides)
+
+  const { data: notifications } = useNotifications(user.id)
+  
+  // Find the first unread ride request notification
+  const rideRequestNotification = notifications?.find((n) => n.type === 'RIDE_REQUESTED' && !n.isRead)
+  const paymentNotification = notifications?.find((n) => n.type === 'PAYMENT_COMPLETED' && !n.isRead)
+
+  const markNotificationRead = useMutation({
+    mutationFn: (notificationId: string) =>
+      api.put(`/api/notifications/${notificationId}/read`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications(user.id) })
+    },
+  })
+
+  const acceptRide = useMutation({
+    mutationFn: (rideId: string) =>
+      api.put(`/api/rides/${rideId}/accept?driverId=${user.id}`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.ridesByDriver(user.id) })
+      if (rideRequestNotification) {
+        markNotificationRead.mutate(rideRequestNotification.id)
+      }
+    },
+    onError: (caught) => {
+      notify(caught instanceof ApiError ? caught.message : 'Could not accept ride', 'error')
+      if (rideRequestNotification) {
+        markNotificationRead.mutate(rideRequestNotification.id)
+      }
+    }
+  })
+
+  const rejectRide = useMutation({
+    mutationFn: (rideId: string) =>
+      api.put(`/api/rides/${rideId}/reject?driverId=${user.id}`, {}),
+    onSuccess: () => {
+      if (rideRequestNotification) {
+        markNotificationRead.mutate(rideRequestNotification.id)
+      }
+    },
+    onError: (caught) => {
+      notify(caught instanceof ApiError ? caught.message : 'Could not reject ride', 'error')
+    }
+  })
 
   const { data: locationName, isLoading: loadingLocationName } = useReverseGeocode(
     profile?.currentLatitude || undefined,
@@ -243,6 +289,36 @@ export function DriverHomePage() {
         <CardRow label="Plate" value={profile.vehiclePlate} />
         <CardRow label="Trips completed" value={profile.totalRides} />
       </Card>
+
+      {rideRequestNotification && rideRequestNotification.relatedId && (
+        <Modal
+          open={true}
+          title="New Ride Request!"
+          description="A rider is waiting for you."
+          confirmLabel="Accept"
+          cancelLabel="Reject"
+          onConfirm={() => acceptRide.mutate(rideRequestNotification.relatedId!)}
+          onCancel={() => rejectRide.mutate(rideRequestNotification.relatedId!)}
+          loading={acceptRide.isPending || rejectRide.isPending}
+        >
+          <p className="text-sm text-ink">{rideRequestNotification.message}</p>
+        </Modal>
+      )}
+
+      {paymentNotification && (
+        <Modal
+          open={true}
+          title="Payment Received"
+          description="You've been paid for your trip."
+          confirmLabel="Dismiss"
+          cancelLabel="Close"
+          onConfirm={() => markNotificationRead.mutate(paymentNotification.id)}
+          onCancel={() => markNotificationRead.mutate(paymentNotification.id)}
+          loading={markNotificationRead.isPending}
+        >
+          <p className="text-sm text-ink">{paymentNotification.message}</p>
+        </Modal>
+      )}
     </div>
   )
 }

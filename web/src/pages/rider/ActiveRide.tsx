@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '../../components/Button'
 import { Card, CardRow } from '../../components/Card'
@@ -27,7 +27,6 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
   const queryClient = useQueryClient()
   const { notify } = useToast()
   const [confirmingCancel, setConfirmingCancel] = useState(false)
-  const [isPaid, setIsPaid] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
   const [paymentIntent, setPaymentIntent] = useState<CreatePaymentIntentResponse | null>(null)
 
@@ -64,6 +63,13 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
       )
     },
   })
+
+  // Automatically find next driver if the previous one rejected (pendingDriverId becomes null)
+  useEffect(() => {
+    if (ride && ride.status === 'REQUESTED' && !ride.driverId && !ride.pendingDriverId && !findDriver.isPending) {
+      findDriver.mutate()
+    }
+  }, [ride, findDriver.isPending, findDriver.mutate])
 
   const initiatePayment = useMutation({
     mutationFn: () =>
@@ -142,15 +148,19 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
           <Button
             fullWidth
             size="lg"
-            loading={findDriver.isPending}
-            onClick={() => findDriver.mutate()}
+            loading={findDriver.isPending || !!ride.pendingDriverId}
+            onClick={() => {
+              if (!ride.pendingDriverId && !findDriver.isPending) {
+                findDriver.mutate()
+              }
+            }}
           >
-            Find a driver
+            {ride.pendingDriverId ? 'Pinging nearest driver...' : 'Finding next driver...'}
           </Button>
         )}
 
         {finished ? (
-          ride.status === 'COMPLETED' && !isPaid ? (
+          ride.status === 'COMPLETED' && !ride.isPaid ? (
             <Button
               fullWidth
               size="lg"
@@ -197,8 +207,8 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
           onClose={() => setShowPayment(false)}
           onSuccess={() => {
             setShowPayment(false)
-            setIsPaid(true)
-            notify('Payment successful!')
+            queryClient.invalidateQueries({ queryKey: queryKeys.ridesByRider(riderId) })
+            notify('Payment successful!', 'success')
           }}
           clientSecret={paymentIntent.clientSecret}
           amount={paymentIntent.amount}

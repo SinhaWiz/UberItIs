@@ -8,7 +8,11 @@ import { ActiveRide } from './ActiveRide'
 import { RequestRideForm } from './RequestRideForm'
 
 function findActiveRide(rides: Ride[] | undefined): Ride | undefined {
-  return rides?.find((ride) => ACTIVE_STATUSES.includes(ride.status))
+  return rides?.find(
+    (ride) =>
+      ACTIVE_STATUSES.includes(ride.status) ||
+      (ride.status === 'COMPLETED' && !ride.isPaid)
+  )
 }
 
 export function RiderHomePage() {

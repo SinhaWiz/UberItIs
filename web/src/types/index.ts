@@ -21,8 +21,10 @@ export const ACTIVE_STATUSES: RideStatus[] = [
   'IN_PROGRESS',
 ]
 
-export function isTerminal(status: RideStatus): boolean {
-  return status === 'COMPLETED' || status === 'CANCELLED'
+export function isTerminal(status: RideStatus, isPaid?: boolean): boolean {
+  if (status === 'CANCELLED') return true
+  if (status === 'COMPLETED' && isPaid) return true
+  return false
 }
 
 /* ---------- user-service ---------- */
@@ -101,6 +103,7 @@ export interface Ride {
   id: string
   riderId: string
   driverId: string | null
+  pendingDriverId: string | null
   pickupLocation: string
   dropoffLocation: string
   pickupLat?: number
@@ -108,8 +111,9 @@ export interface Ride {
   dropoffLat?: number
   dropoffLng?: number
   status: RideStatus
-  fareEstimate: number | null
-  finalFare: number | null
+  fareEstimate?: number
+  finalFare?: number
+  isPaid?: boolean
   requestedAt: string | null
   matchedAt: string | null
   startedAt: string | null
@@ -131,6 +135,18 @@ export interface RideRequestBody {
 
 export interface MatchDriverRequest {
   driverId?: string
+}
+
+/* ---------- notification-service ---------- */
+
+export interface Notification {
+  id: string
+  userId: string
+  type: string
+  message: string
+  relatedId: string | null
+  isRead: boolean
+  createdAt: string
 }
 
 /* ---------- errors ---------- */

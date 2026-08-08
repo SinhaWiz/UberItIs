@@ -379,6 +379,7 @@ public class RideService {
                 .status(ride.getStatus())
                 .fareEstimate(ride.getFareEstimate())
                 .finalFare(ride.getFinalFare())
+                .isPaid(ride.getIsPaid())
                 .requestedAt(ride.getRequestedAt())
                 .matchedAt(ride.getMatchedAt())
                 .startedAt(ride.getStartedAt())
