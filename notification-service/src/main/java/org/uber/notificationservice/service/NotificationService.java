@@ -19,11 +19,12 @@ public class NotificationService {
     /**
      * Creates and persists a new notification for the given user.
      */
-    public NotificationResponse createNotification(String userId, NotificationType type, String message) {
+    public NotificationResponse createNotification(String userId, NotificationType type, String message, String relatedId) {
         Notification notification = Notification.builder()
                 .userId(userId)
                 .type(type)
                 .message(message)
+                .relatedId(relatedId)
                 .build();
 
         Notification saved = notificationRepository.save(notification);
@@ -69,6 +70,7 @@ public class NotificationService {
                 .userId(notification.getUserId())
                 .type(notification.getType())
                 .message(notification.getMessage())
+                .relatedId(notification.getRelatedId())
                 .isRead(notification.getIsRead())
                 .createdAt(notification.getCreatedAt())
                 .build();

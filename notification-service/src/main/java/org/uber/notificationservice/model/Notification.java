@@ -28,6 +28,8 @@ public class Notification {
 
     private String message;
 
+    private String relatedId;
+
     @Builder.Default
     private Boolean isRead = false;
 

@@ -19,6 +19,7 @@ public class PaymentCompletedEvent {
 
     private String paymentId;
     private String riderId;
+    private String driverId;
     private Double amount;
     private String status;
     private LocalDateTime timestamp;

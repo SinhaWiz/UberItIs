@@ -33,9 +33,24 @@ public class PaymentCompletedListener {
             notificationService.createNotification(
                     event.getRiderId(),
                     NotificationType.PAYMENT_COMPLETED,
-                    message
+                    message,
+                    event.getPaymentId()
             );
             log.info("Created payment notification for rider userId={}", event.getRiderId());
+        }
+
+        if (event.getDriverId() != null) {
+            String message = String.format(
+                    "You have received a payment of ৳%.2f for your recent ride.",
+                    event.getAmount() != null ? event.getAmount() : 0.0
+            );
+            notificationService.createNotification(
+                    event.getDriverId(),
+                    NotificationType.PAYMENT_COMPLETED,
+                    message,
+                    event.getPaymentId()
+            );
+            log.info("Created payment notification for driver userId={}", event.getDriverId());
         }
     }
 }

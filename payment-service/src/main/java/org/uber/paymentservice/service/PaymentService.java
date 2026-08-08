@@ -218,6 +218,7 @@ public class PaymentService {
         PaymentCompletedEvent event = PaymentCompletedEvent.builder()
                 .paymentId(payment.getId())
                 .riderId(payment.getRiderId())
+                .driverId(payment.getDriverId())
                 .amount(payment.getAmount())
                 .status(payment.getStatus())
                 .timestamp(LocalDateTime.now())

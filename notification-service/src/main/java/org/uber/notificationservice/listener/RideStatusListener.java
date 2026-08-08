@@ -30,13 +30,13 @@ public class RideStatusListener {
 
         // Always notify the rider
         if (event.getRiderId() != null) {
-            notificationService.createNotification(event.getRiderId(), type, riderMessage);
+            notificationService.createNotification(event.getRiderId(), type, riderMessage, event.getRideId());
             log.info("Created rider notification for userId={}", event.getRiderId());
         }
 
         // Notify the driver when one is assigned (not for REQUESTED or early CANCELLED)
         if (event.getDriverId() != null) {
-            notificationService.createNotification(event.getDriverId(), type, driverMessage);
+            notificationService.createNotification(event.getDriverId(), type, driverMessage, event.getRideId());
             log.info("Created driver notification for userId={}", event.getDriverId());
         }
     }

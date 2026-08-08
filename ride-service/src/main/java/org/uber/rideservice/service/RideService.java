@@ -63,10 +63,7 @@ public class RideService {
     }
 
     /**
-     * Matches an available driver to a REQUESTED ride and reserves the driver's availability.
-     * Uses driver-service's nearby-search when pickup coordinates are available on the request,
-     * otherwise falls back to the plain available-drivers list. An explicit driverId in the
-     * request takes precedence over automatic selection.
+     * Finds the nearest available driver (ignoring those who rejected) and pings them.
      */
     public RideResponse matchDriver(String id, MatchDriverRequest request) {
         Ride ride = findRideOrThrow(id);
@@ -79,14 +76,66 @@ public class RideService {
             driverId = selectAvailableDriver(ride);
         }
 
+        ride.setPendingDriverId(driverId);
+
+        Ride updatedRide = rideRepository.save(ride);
+        
+        // Publish event to ping driver
+        RideStatusChangedEvent event = RideStatusChangedEvent.builder()
+                .rideId(ride.getId())
+                .riderId(ride.getRiderId())
+                .driverId(ride.getPendingDriverId()) // send pending driver ID so they get notified
+                .status(ride.getStatus())
+                .message("New ride request! Do you accept?")
+                .timestamp(LocalDateTime.now())
+                .build();
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.RIDE_STATUS_ROUTING_KEY, event);
+
+        return toResponse(updatedRide);
+    }
+
+    /**
+     * Driver explicitly accepts a ride.
+     */
+    public RideResponse acceptRide(String id, String driverId) {
+        Ride ride = findRideOrThrow(id);
+        if (ride.getStatus() != RideStatus.REQUESTED) {
+            throw new InvalidStateException("Ride " + id + " is no longer requested.");
+        }
+        if (!driverId.equals(ride.getPendingDriverId())) {
+            throw new IllegalArgumentException("Driver " + driverId + " is not the pending driver for this ride.");
+        }
+
         setDriverAvailability(driverId, false);
 
         ride.setDriverId(driverId);
+        ride.setPendingDriverId(null);
         ride.setStatus(RideStatus.MATCHED);
         ride.setMatchedAt(LocalDateTime.now());
 
         Ride updatedRide = rideRepository.save(ride);
         publishRideStatusChanged(updatedRide, "Driver matched");
+        return toResponse(updatedRide);
+    }
+
+    /**
+     * Driver explicitly rejects a ride.
+     */
+    public RideResponse rejectRide(String id, String driverId) {
+        Ride ride = findRideOrThrow(id);
+        if (ride.getStatus() != RideStatus.REQUESTED) {
+            throw new InvalidStateException("Ride " + id + " is no longer requested.");
+        }
+        if (!driverId.equals(ride.getPendingDriverId())) {
+            throw new IllegalArgumentException("Driver " + driverId + " is not the pending driver for this ride.");
+        }
+
+        ride.getRejectedDriverIds().add(driverId);
+        ride.setPendingDriverId(null);
+
+        Ride updatedRide = rideRepository.save(ride);
+        // We don't publish a global status changed event here, because we want the rider UI to just 
+        // see pendingDriverId become null and retry matching automatically.
         return toResponse(updatedRide);
     }
 
@@ -213,11 +262,21 @@ public class RideService {
             throw new ResourceNotFoundException("Failed to reach driver-service to find an available driver: " + e.getMessage());
         }
 
-        if (drivers == null || drivers.isEmpty()) {
-            throw new ResourceNotFoundException("No available drivers found nearby");
+        // Filter out rejected drivers and find the first available
+        String selectedDriverId = null;
+        for (Map<String, Object> d : drivers) {
+            String id = (String) d.get("userId");
+            if (!ride.getRejectedDriverIds().contains(id)) {
+                selectedDriverId = id;
+                break;
+            }
         }
 
-        return (String) drivers.get(0).get("userId");
+        if (selectedDriverId == null) {
+            throw new ResourceNotFoundException("No available drivers found nearby who haven't rejected this ride");
+        }
+
+        return selectedDriverId;
     }
 
     /**
@@ -310,6 +369,7 @@ public class RideService {
                 .id(ride.getId())
                 .riderId(ride.getRiderId())
                 .driverId(ride.getDriverId())
+                .pendingDriverId(ride.getPendingDriverId())
                 .pickupLocation(ride.getPickupLocation())
                 .dropoffLocation(ride.getDropoffLocation())
                 .pickupLat(ride.getPickupLat())
