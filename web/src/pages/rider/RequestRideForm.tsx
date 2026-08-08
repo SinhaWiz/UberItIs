@@ -28,7 +28,9 @@ export function RequestRideForm({ riderId }: { riderId: string }) {
 
   // Final confirmed state
   const [pickup, setPickup] = useState('')
+  const [pickupCoords, setPickupCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [dropoff, setDropoff] = useState('')
+  const [dropoffCoords, setDropoffCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const requestRide = useMutation({
@@ -37,6 +39,10 @@ export function RequestRideForm({ riderId }: { riderId: string }) {
         riderId,
         pickupLocation: pickup,
         dropoffLocation: dropoff,
+        pickupLat: pickupCoords?.lat,
+        pickupLng: pickupCoords?.lng,
+        dropoffLat: dropoffCoords?.lat,
+        dropoffLng: dropoffCoords?.lng,
       })
 
       try {
@@ -89,18 +95,22 @@ export function RequestRideForm({ riderId }: { riderId: string }) {
       
       if (activeTab === 'pickup') {
         setPickup(locString)
+        setPickupCoords({ lat: tempLat, lng: tempLng })
         setActiveTab('dropoff')
       } else {
         setDropoff(locString)
+        setDropoffCoords({ lat: tempLat, lng: tempLng })
       }
     } catch (e) {
       console.error(e)
       const locString = `Unknown Location (${tempLng.toFixed(6)}, ${tempLat.toFixed(6)})`
       if (activeTab === 'pickup') {
         setPickup(locString)
+        setPickupCoords({ lat: tempLat, lng: tempLng })
         setActiveTab('dropoff')
       } else {
         setDropoff(locString)
+        setDropoffCoords({ lat: tempLat, lng: tempLng })
       }
     } finally {
       setFetchingGeocode(false)
@@ -197,7 +207,7 @@ export function RequestRideForm({ riderId }: { riderId: string }) {
       </div>
 
       <p className="text-xs text-muted text-center">
-        Fares are estimated at a flat rate until the payment service is live.
+        Fares are estimated based on distance using a base fare and per-km rate.
       </p>
     </div>
   )

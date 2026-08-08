@@ -112,11 +112,7 @@ public class PaymentService {
      * Creates or updates a payment for a completed ride using the report's simplified fare formula.
      */
     public PaymentResponse processPayment(ProcessPaymentRequest request) {
-        if (request.getDistance() == null) {
-            throw new IllegalArgumentException("Distance is required");
-        }
-
-        if (request.getDistance() < 0) {
+        if (request.getDistance() != null && request.getDistance() < 0) {
             throw new IllegalArgumentException("Distance cannot be negative");
         }
 

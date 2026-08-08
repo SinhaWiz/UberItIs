@@ -25,8 +25,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class RideService {
 
-    private static final double BASE_FARE = 50.0;
-
     private final RideRepository rideRepository;
     private final RestTemplate restTemplate;
     private final RabbitTemplate rabbitTemplate;
@@ -47,8 +45,9 @@ public class RideService {
                 .dropoffLat(request.getDropoffLat())
                 .dropoffLng(request.getDropoffLng())
                 .status(RideStatus.REQUESTED)
-                .fareEstimate(BASE_FARE)
                 .build();
+
+        ride.setFareEstimate(calculateFare(ride));
 
         Ride savedRide = rideRepository.save(ride);
         publishRideStatusChanged(savedRide, "Ride requested");
@@ -232,19 +231,44 @@ public class RideService {
     }
 
     /**
-     * TODO: Call Payment Service to process payment for the completed ride.
-     *
-     * Target: POST http://payment-service/api/payments/process
-     * Expected request: {rideId, riderId, driverId, distance}
-     * Expected response: Payment object with a computed "amount" field
-     * (fare = baseFare 50.0 + distance * perKmRate 15.0, per report.md Section 5.3.4).
-     *
-     * payment-service is not implemented yet, so this currently skips the call entirely and
-     * returns the ride's fareEstimate as the finalFare. Replace this once payment-service exists.
-     * See report.md Section 5.3.4 and 7.2 for the Payment Service API spec.
+     * Calls Payment Service to calculate the final distance-based fare for the completed ride.
+     * Target: POST http://payment-service/api/payments/calculate
      */
     private Double processPayment(Ride ride) {
-        return ride.getFareEstimate();
+        return calculateFare(ride);
+    }
+
+    /**
+     * Helper to call payment-service for fare calculations based on coordinates.
+     */
+    private Double calculateFare(Ride ride) {
+        if (ride.getPickupLat() == null || ride.getPickupLng() == null ||
+            ride.getDropoffLat() == null || ride.getDropoffLng() == null) {
+            return 200.0; // fallback base fare if no coordinates
+        }
+        
+        try {
+            Map<String, Object> request = Map.of(
+                    "pickupLat", ride.getPickupLat(),
+                    "pickupLng", ride.getPickupLng(),
+                    "dropoffLat", ride.getDropoffLat(),
+                    "dropoffLng", ride.getDropoffLng()
+            );
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = restTemplate.postForObject(
+                    "http://payment-service/api/payments/calculate",
+                    request,
+                    Map.class
+            );
+            
+            if (response != null && response.get("amount") != null) {
+                return ((Number) response.get("amount")).doubleValue();
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to reach payment-service for fare calculation: " + e.getMessage());
+        }
+        return 200.0; // fallback
     }
 
     /**

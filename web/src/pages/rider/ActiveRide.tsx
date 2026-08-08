@@ -12,8 +12,9 @@ import { queryKeys, useRide } from '../../hooks/queries'
 import { ApiError, api } from '../../lib/api'
 import { STATUS_LABEL, formatFare } from '../../lib/format'
 import { usePageTitle } from '../../hooks/usePageTitle'
-import { isTerminal, type Ride } from '../../types'
+import { isTerminal, type Ride, type CreatePaymentIntentResponse } from '../../types'
 import { SkeletonCard } from '../../components/Skeleton'
+import { PaymentModal } from '../../components/PaymentModal'
 
 interface ActiveRideProps {
   rideId: string
@@ -26,6 +27,9 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
   const queryClient = useQueryClient()
   const { notify } = useToast()
   const [confirmingCancel, setConfirmingCancel] = useState(false)
+  const [isPaid, setIsPaid] = useState(false)
+  const [showPayment, setShowPayment] = useState(false)
+  const [paymentIntent, setPaymentIntent] = useState<CreatePaymentIntentResponse | null>(null)
 
   const { data: ride, isLoading } = useRide(rideId)
 
@@ -58,6 +62,26 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
         caught instanceof ApiError ? caught.message : 'Could not find a driver',
         'error',
       )
+    },
+  })
+
+  const initiatePayment = useMutation({
+    mutationFn: () =>
+      api.post<CreatePaymentIntentResponse>('/api/payments/create-intent', {
+        rideId: ride?.id,
+        riderId: ride?.riderId,
+        driverId: ride?.driverId,
+        pickupLat: ride?.pickupLat,
+        pickupLng: ride?.pickupLng,
+        dropoffLat: ride?.dropoffLat,
+        dropoffLng: ride?.dropoffLng,
+      }),
+    onSuccess: (res) => {
+      setPaymentIntent(res)
+      setShowPayment(true)
+    },
+    onError: (caught) => {
+      notify(caught instanceof ApiError ? caught.message : 'Could not initiate payment', 'error')
     },
   })
 
@@ -126,9 +150,20 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
         )}
 
         {finished ? (
-          <Button fullWidth size="lg" onClick={onDismiss}>
-            {ride.status === 'COMPLETED' ? 'Done' : 'Request another ride'}
-          </Button>
+          ride.status === 'COMPLETED' && !isPaid ? (
+            <Button
+              fullWidth
+              size="lg"
+              loading={initiatePayment.isPending}
+              onClick={() => initiatePayment.mutate()}
+            >
+              Pay Now
+            </Button>
+          ) : (
+            <Button fullWidth size="lg" onClick={onDismiss}>
+              {ride.status === 'COMPLETED' ? 'Done' : 'Request another ride'}
+            </Button>
+          )
         ) : (
           <Button
             variant="danger"
@@ -155,6 +190,21 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
         onConfirm={() => cancelRide.mutate()}
         onCancel={() => setConfirmingCancel(false)}
       />
+
+      {ride && paymentIntent && (
+        <PaymentModal
+          isOpen={showPayment}
+          onClose={() => setShowPayment(false)}
+          onSuccess={() => {
+            setShowPayment(false)
+            setIsPaid(true)
+            notify('Payment successful!')
+          }}
+          clientSecret={paymentIntent.clientSecret}
+          amount={paymentIntent.amount}
+          ride={ride}
+        />
+      )}
     </div>
   )
 }
