@@ -24,6 +24,25 @@ Content-Type: application/json
 
 ###
 
+### 1b. Calculate fare with an invalid distance (should fail with 400)
+POST http://localhost:8084/api/payments/calculate
+Content-Type: application/json
+
+{
+  "rideId": "ride-invalid",
+  "riderId": "rider-invalid",
+  "driverId": "driver-invalid",
+  "distance": -1
+}
+
+> {%
+    client.test("Invalid fare calculation rejected", function() {
+        client.assert(response.status === 400, "Expected 400 Bad Request");
+    });
+%}
+
+###
+
 ### 2. Process payment for a completed ride
 POST http://localhost:8084/api/payments/process
 Content-Type: application/json
@@ -53,6 +72,17 @@ GET http://localhost:8084/api/payments/{{paymentId}}
     client.test("Payment fetched successfully", function() {
         client.assert(response.status === 200, "Expected 200 OK");
         client.assert(response.body.id === client.global.get("paymentId"), "Payment id should match");
+    });
+%}
+
+###
+
+### 3b. Get a non-existent payment by id (should fail with 404)
+GET http://localhost:8084/api/payments/000000000000000000000000
+
+> {%
+    client.test("Missing payment returns 404", function() {
+        client.assert(response.status === 404, "Expected 404 Not Found");
     });
 %}
 
