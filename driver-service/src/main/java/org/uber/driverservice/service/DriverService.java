@@ -132,12 +132,37 @@ public class DriverService {
         double minLng = longitude - lngDelta;
         double maxLng = longitude + lngDelta;
 
-        return driverProfileRepository
+        List<DriverProfile> drivers = driverProfileRepository
                 .findByIsAvailableTrueAndCurrentLatitudeBetweenAndCurrentLongitudeBetween(
-                        minLat, maxLat, minLng, maxLng)
-                .stream()
+                        minLat, maxLat, minLng, maxLng);
+
+        // Sort by actual Haversine distance to ensure the absolute nearest is first
+        drivers.sort((d1, d2) -> {
+            double dist1 = calculateDistance(latitude, longitude, d1.getCurrentLatitude(), d1.getCurrentLongitude());
+            double dist2 = calculateDistance(latitude, longitude, d2.getCurrentLatitude(), d2.getCurrentLongitude());
+            return Double.compare(dist1, dist2);
+        });
+
+        return drivers.stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    /**
+     * Haversine formula to calculate distance between two coordinates in kilometers.
+     */
+    private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+        if (lat1 == lat2 && lon1 == lon2) {
+            return 0.0;
+        }
+        double earthRadius = 6371.0;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                   Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                   Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return earthRadius * c;
     }
 
     /**

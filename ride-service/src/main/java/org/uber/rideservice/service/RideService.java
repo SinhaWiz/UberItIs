@@ -76,7 +76,7 @@ public class RideService {
 
         String driverId = request != null ? request.getDriverId() : null;
         if (driverId == null) {
-            driverId = selectAvailableDriver(request);
+            driverId = selectAvailableDriver(ride);
         }
 
         setDriverAvailability(driverId, false);
@@ -198,16 +198,23 @@ public class RideService {
      * available-drivers list and picks the first entry.
      */
     @SuppressWarnings("unchecked")
-    private String selectAvailableDriver(MatchDriverRequest request) {
+    private String selectAvailableDriver(Ride ride) {
         List<Map<String, Object>> drivers;
         try {
-            drivers = restTemplate.getForObject("http://driver-service/api/drivers/available", List.class);
+            if (ride.getPickupLat() != null && ride.getPickupLng() != null) {
+                // Default search radius is 5.0km
+                String url = String.format("http://driver-service/api/drivers/nearby?lat=%s&lng=%s&radius=5.0", 
+                        ride.getPickupLat(), ride.getPickupLng());
+                drivers = restTemplate.getForObject(url, List.class);
+            } else {
+                drivers = restTemplate.getForObject("http://driver-service/api/drivers/available", List.class);
+            }
         } catch (Exception e) {
             throw new ResourceNotFoundException("Failed to reach driver-service to find an available driver: " + e.getMessage());
         }
 
         if (drivers == null || drivers.isEmpty()) {
-            throw new ResourceNotFoundException("No available drivers found");
+            throw new ResourceNotFoundException("No available drivers found nearby");
         }
 
         return (String) drivers.get(0).get("userId");

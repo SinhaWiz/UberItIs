@@ -183,8 +183,9 @@ Since Spring Cloud 2020.0 (which removed Netflix Ribbon), adding `@LoadBalanced`
 
 ### 4.8 Backend TODOs & Technical Debt
 The following features are currently implemented as stubs and need to be properly implemented in future iterations:
-- **1. Nearest Driver Matching**: `RideService` currently grabs the first available driver from `/available`. It needs to be updated to call `/api/drivers/nearby` using actual coordinates.
-- **2. Fare Calculation**: `RideService` returns a hardcoded `baseFare` (50.0). This must be replaced with an actual call to the `payment-service` to calculate distance-based fares.
-- **3. Database Schema Updates**: To support the above calculations, the `Ride` model and MongoDB schema must be updated to explicitly store `pickupLat`, `pickupLng`, `dropoffLat`, and `dropoffLng` as numeric fields, rather than parsing them out of the display name strings.
-- **4. Asynchronous Driver Matching**: The system currently matches a driver immediately/synchronously upon a ride request. This must be decoupled. A ride should remain in the `REQUESTED` state while the nearest top 2 drivers are pinged via the `notification-service` (RabbitMQ events).
-- **5. Driver Acceptance Flow**: Drivers should receive ride requests and explicitly accept them. Only upon acceptance should the ride status transition to `MATCHED` and bind the driver to the ride.
+- ~~**1. Nearest Driver Matching**: `RideService` currently grabs the first available driver from `/available`. It needs to be updated to call `/api/drivers/nearby` using actual coordinates.~~ (DONE)
+- ~~**2. Fare Calculation**: `RideService` returns a hardcoded `baseFare` (50.0). This must be replaced with an actual call to the `payment-service` to calculate distance-based fares.~~ (DONE)
+- ~~**3. Database Schema Updates**: To support the above calculations, the `Ride` model and MongoDB schema must be updated to explicitly store `pickupLat`, `pickupLng`, `dropoffLat`, and `dropoffLng` as numeric fields, rather than parsing them out of the display name strings.~~ (DONE)
+- **4. Asynchronous Driver Matching**: The system currently matches a driver immediately/synchronously upon a ride request. This must be decoupled. A ride should remain in the `REQUESTED` state while the most nearest driver (1 most nearest driver) is pinged via the `notification-service` (RabbitMQ events).
+- **5. Driver Acceptance Flow**: Driver should receive ride requests and explicitly accept them. Only upon acceptance should the ride status transition to `MATCHED` and bind the driver to the ride.
+- **6. Driver Payment Notification**: The driver currently doesn't know when a payment has been completed. A notification must be sent to the driver upon successful payment (via `payment.completed` event). This will require the `notification-service` to be implemented.
