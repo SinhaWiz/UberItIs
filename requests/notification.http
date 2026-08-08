@@ -1,0 +1,71 @@
+### ──────────────────────────────────────────────
+### Notification Service — IntelliJ HTTP Client
+### ──────────────────────────────────────────────
+### Run these after triggering ride / payment events
+### so that RabbitMQ has produced notifications.
+### ──────────────────────────────────────────────
+
+### 1. Get all notifications for a rider
+### Replace {{riderId}} with an actual user ID that has triggered rides.
+GET http://localhost:8085/api/notifications/user/{{riderId}}
+Content-Type: application/json
+
+> {%
+    client.test("Returns 200", function () {
+        client.assert(response.status === 200, "Expected 200");
+    });
+    if (response.body.length > 0) {
+        client.global.set("notificationId", response.body[0].id);
+    }
+%}
+
+###
+
+### 2. Get unread notifications for a rider
+GET http://localhost:8085/api/notifications/user/{{riderId}}/unread
+Content-Type: application/json
+
+> {%
+    client.test("Returns 200", function () {
+        client.assert(response.status === 200, "Expected 200");
+    });
+%}
+
+###
+
+### 3. Mark a notification as read
+PUT http://localhost:8085/api/notifications/{{notificationId}}/read
+Content-Type: application/json
+
+> {%
+    client.test("Returns 200", function () {
+        client.assert(response.status === 200, "Expected 200");
+    });
+    client.test("isRead is true", function () {
+        client.assert(response.body.isRead === true, "Expected isRead=true");
+    });
+%}
+
+###
+
+### 4. Get all notifications for a driver
+GET http://localhost:8085/api/notifications/user/{{driverId}}
+Content-Type: application/json
+
+> {%
+    client.test("Returns 200", function () {
+        client.assert(response.status === 200, "Expected 200");
+    });
+%}
+
+###
+
+### 5. Error — Mark non-existent notification as read → 404
+PUT http://localhost:8085/api/notifications/000000000000000000000000/read
+Content-Type: application/json
+
+> {%
+    client.test("Returns 404", function () {
+        client.assert(response.status === 404, "Expected 404");
+    });
+%}
