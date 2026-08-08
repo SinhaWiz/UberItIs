@@ -55,3 +55,15 @@ GET http://localhost:8084/api/payments/rider/rider-123
         client.assert(Array.isArray(response.body), "Response should be a list");
     });
 %}
+
+###
+
+### 5. Get payments by driver id (replace with a real driver id once one exists)
+GET http://localhost:8084/api/payments/driver/driver-123
+
+> {%
+    client.test("Driver earnings history returned", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(Array.isArray(response.body), "Response should be a list");
+    });
+%}

@@ -63,6 +63,15 @@ public class PaymentService {
                 .toList();
     }
 
+    /**
+     * Returns all payment records for a driver.
+     */
+    public List<PaymentResponse> getPaymentsByDriverId(String driverId) {
+        return paymentRepository.findByDriverId(driverId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     private PaymentResponse toResponse(Payment payment) {
         return PaymentResponse.builder()
                 .id(payment.getId())

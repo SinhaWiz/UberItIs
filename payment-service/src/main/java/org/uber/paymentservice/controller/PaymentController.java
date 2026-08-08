@@ -45,4 +45,10 @@ public class PaymentController {
         List<PaymentResponse> payments = paymentService.getPaymentsByRiderId(riderId);
         return ResponseEntity.ok(payments);
     }
+
+    @GetMapping("/driver/{driverId}")
+    public ResponseEntity<List<PaymentResponse>> getPaymentsByDriverId(@PathVariable String driverId) {
+        List<PaymentResponse> payments = paymentService.getPaymentsByDriverId(driverId);
+        return ResponseEntity.ok(payments);
+    }
 }
