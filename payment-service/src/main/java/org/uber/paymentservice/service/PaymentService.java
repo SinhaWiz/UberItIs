@@ -2,12 +2,15 @@ package org.uber.paymentservice.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.uber.paymentservice.dto.ProcessPaymentRequest;
 import org.uber.paymentservice.dto.CalculateFareRequest;
 import org.uber.paymentservice.dto.PaymentResponse;
 import org.uber.paymentservice.exception.ResourceNotFoundException;
 import org.uber.paymentservice.model.Payment;
+import org.uber.paymentservice.model.PaymentStatus;
 import org.uber.paymentservice.repository.PaymentRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -32,6 +35,40 @@ public class PaymentService {
         }
 
         return BASE_FARE + (request.getDistance() * PER_KM_RATE);
+    }
+
+    /**
+     * Creates or updates a payment for a completed ride using the report's simplified fare formula.
+     */
+    public PaymentResponse processPayment(ProcessPaymentRequest request) {
+        if (request.getDistance() == null) {
+            throw new IllegalArgumentException("Distance is required");
+        }
+
+        if (request.getDistance() < 0) {
+            throw new IllegalArgumentException("Distance cannot be negative");
+        }
+
+        double amount = calculateFare(CalculateFareRequest.builder()
+                .rideId(request.getRideId())
+                .riderId(request.getRiderId())
+                .driverId(request.getDriverId())
+                .distance(request.getDistance())
+                .build());
+
+        Payment payment = paymentRepository.findByRideId(request.getRideId())
+                .orElseGet(Payment::new);
+
+        payment.setRideId(request.getRideId());
+        payment.setRiderId(request.getRiderId());
+        payment.setDriverId(request.getDriverId());
+        payment.setAmount(amount);
+        payment.setStatus(PaymentStatus.COMPLETED);
+        payment.setPaymentMethod("CASH");
+        payment.setCompletedAt(LocalDateTime.now());
+
+        Payment savedPayment = paymentRepository.save(payment);
+        return toResponse(savedPayment);
     }
 
     /**

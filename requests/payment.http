@@ -24,29 +24,53 @@ Content-Type: application/json
 
 ###
 
-### 2. Get payment by id (replace with a real payment id once one exists)
-GET http://localhost:8084/api/payments/000000000000000000000000
+### 2. Process payment for a completed ride
+POST http://localhost:8084/api/payments/process
+Content-Type: application/json
+
+{
+  "rideId": "ride-123",
+  "riderId": "rider-123",
+  "driverId": "driver-123",
+  "distance": 8.5
+}
 
 > {%
-    client.test("Missing payment returns 404", function() {
-        client.assert(response.status === 404, "Expected 404 Not Found");
+    client.test("Payment processed successfully", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.status === "COMPLETED", "Status should be COMPLETED");
+        client.assert(response.body.amount === 177.5, "Amount should match calculated fare");
+    });
+    client.global.set("paymentId", response.body.id);
+%}
+
+###
+
+### 3. Get payment by id (uses the processed payment)
+GET http://localhost:8084/api/payments/{{paymentId}}
+
+> {%
+    client.test("Payment fetched successfully", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.id === client.global.get("paymentId"), "Payment id should match");
     });
 %}
 
 ###
 
-### 3. Get payment by ride id (replace with a real ride id once one exists)
+### 4. Get payment by ride id (uses the processed ride id)
 GET http://localhost:8084/api/payments/ride/ride-123
 
 > {%
-    client.test("Missing payment by ride returns 404", function() {
-        client.assert(response.status === 404, "Expected 404 Not Found");
+    client.test("Payment by ride fetched successfully", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.id === client.global.get("paymentId"), "Payment id should match");
     });
 %}
 
 ###
 
-### 4. Get payments by rider id (replace with a real rider id once one exists)
+### 5. Get payments by rider id (uses the processed rider id)
 GET http://localhost:8084/api/payments/rider/rider-123
 
 > {%
@@ -58,7 +82,7 @@ GET http://localhost:8084/api/payments/rider/rider-123
 
 ###
 
-### 5. Get payments by driver id (replace with a real driver id once one exists)
+### 6. Get payments by driver id (uses the processed driver id)
 GET http://localhost:8084/api/payments/driver/driver-123
 
 > {%
