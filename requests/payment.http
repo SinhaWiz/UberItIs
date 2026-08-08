@@ -1,0 +1,34 @@
+### =============================
+### Payment Service API Tests
+### =============================
+### Prerequisite: payment-service must be running on port 8084.
+### Run these requests sequentially from top to bottom.
+
+### 1. Calculate fare for a ride
+POST http://localhost:8084/api/payments/calculate
+Content-Type: application/json
+
+{
+  "rideId": "ride-123",
+  "riderId": "rider-123",
+  "driverId": "driver-123",
+  "distance": 8.5
+}
+
+> {%
+    client.test("Fare calculated successfully", function() {
+        client.assert(response.status === 200, "Expected 200 OK");
+        client.assert(response.body.amount === 177.5, "Amount should match base fare + distance rate");
+    });
+%}
+
+###
+
+### 2. Get payment by id (replace with a real payment id once one exists)
+GET http://localhost:8084/api/payments/000000000000000000000000
+
+> {%
+    client.test("Missing payment returns 404", function() {
+        client.assert(response.status === 404, "Expected 404 Not Found");
+    });
+%}
