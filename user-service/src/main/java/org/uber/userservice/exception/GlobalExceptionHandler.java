@@ -1,12 +1,15 @@
 package org.uber.userservice.exception;
 
+import java.time.LocalDateTime;
+import java.util.Map;
+
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
-import java.util.Map;
+import com.mongodb.MongoException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -38,6 +41,16 @@ public class GlobalExceptionHandler {
                 "status", 400,
                 "error", "Bad Request",
                 "message", ex.getMessage()
+        ));
+    }
+
+    @ExceptionHandler({DataAccessException.class, MongoException.class})
+    public ResponseEntity<Map<String, Object>> handleDatabaseError(Exception ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                "timestamp", LocalDateTime.now(),
+                "status", 503,
+                "error", "Service Unavailable",
+                "message", "Database error or unavailable. Check MongoDB configuration and connectivity."
         ));
     }
 }
