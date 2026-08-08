@@ -24,4 +24,9 @@ public class NotificationController {
     public ResponseEntity<List<NotificationResponse>> getUnreadNotifications(@PathVariable String userId) {
         return ResponseEntity.ok(notificationService.getUnreadNotifications(userId));
     }
+
+    @PutMapping("/{id}/read")
+    public ResponseEntity<NotificationResponse> markAsRead(@PathVariable String id) {
+        return ResponseEntity.ok(notificationService.markAsRead(id));
+    }
 }
