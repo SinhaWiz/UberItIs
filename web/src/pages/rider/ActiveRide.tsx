@@ -12,7 +12,7 @@ import { queryKeys, useRide } from '../../hooks/queries'
 import { ApiError, api } from '../../lib/api'
 import { STATUS_LABEL, formatFare } from '../../lib/format'
 import { usePageTitle } from '../../hooks/usePageTitle'
-import { isTerminal, type Ride, type CreatePaymentIntentResponse } from '../../types'
+import type { Ride, CreatePaymentIntentResponse } from '../../types'
 import { SkeletonCard } from '../../components/Skeleton'
 import { PaymentModal } from '../../components/PaymentModal'
 
@@ -95,7 +95,16 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
     return <SkeletonCard />
   }
 
-  const finished = isTerminal(ride.status)
+  const finished = ride.status === 'COMPLETED' || ride.status === 'CANCELLED'
+  
+  useEffect(() => {
+    if (finished && !ride.isPaid && ride.finalFare && ride.finalFare > 0) {
+      if (!showPayment && !initiatePayment.isPending && !paymentIntent) {
+        initiatePayment.mutate()
+      }
+    }
+  }, [finished, ride.isPaid, ride.finalFare, showPayment, initiatePayment.isPending, paymentIntent, initiatePayment.mutate])
+
   const waitingForDriver = ride.status === 'REQUESTED' && !ride.driverId
 
   return (
@@ -160,7 +169,7 @@ export function ActiveRide({ rideId, riderId, onDismiss }: ActiveRideProps) {
         )}
 
         {finished ? (
-          ride.status === 'COMPLETED' && !ride.isPaid ? (
+          !ride.isPaid && ride.finalFare && ride.finalFare > 0 ? (
             <Button
               fullWidth
               size="lg"

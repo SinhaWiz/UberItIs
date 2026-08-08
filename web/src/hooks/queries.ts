@@ -30,7 +30,7 @@ export function useRide(rideId: string | null) {
     enabled: rideId !== null,
     refetchInterval: (query) => {
       const ride = query.state.data as Ride | undefined
-      return ride && isTerminal(ride.status, ride.isPaid) ? false : RIDE_POLL_MS
+      return ride && isTerminal(ride) ? false : RIDE_POLL_MS
     },
   })
 }

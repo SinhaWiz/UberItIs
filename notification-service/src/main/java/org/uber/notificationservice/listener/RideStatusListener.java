@@ -34,10 +34,15 @@ public class RideStatusListener {
             log.info("Created rider notification for userId={}", event.getRiderId());
         }
 
-        // Notify the driver when one is assigned (not for REQUESTED or early CANCELLED)
+        // Notify the driver when one is assigned
         if (event.getDriverId() != null) {
             notificationService.createNotification(event.getDriverId(), type, driverMessage, event.getRideId());
             log.info("Created driver notification for userId={}", event.getDriverId());
+        } else if (event.getPendingDriverId() != null && "CANCELLED".equals(event.getStatus())) {
+            // Notify the pending driver that the request was cancelled before they could accept
+            notificationService.createNotification(event.getPendingDriverId(), NotificationType.RIDE_CANCELLED, 
+                "The ride request you were reviewing was cancelled by the rider.", event.getRideId());
+            log.info("Created pending driver cancellation notification for userId={}", event.getPendingDriverId());
         }
     }
 

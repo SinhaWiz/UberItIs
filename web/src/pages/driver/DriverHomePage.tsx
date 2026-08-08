@@ -48,9 +48,9 @@ export function DriverHomePage() {
 
   const { data: notifications } = useNotifications(user.id)
   
-  // Find the first unread ride request notification
   const rideRequestNotification = notifications?.find((n) => n.type === 'RIDE_REQUESTED' && !n.isRead)
   const paymentNotification = notifications?.find((n) => n.type === 'PAYMENT_COMPLETED' && !n.isRead)
+  const cancelledNotification = notifications?.find((n) => n.type === 'RIDE_CANCELLED' && !n.isRead)
 
   const markNotificationRead = useMutation({
     mutationFn: (notificationId: string) =>
@@ -302,6 +302,21 @@ export function DriverHomePage() {
           loading={acceptRide.isPending || rejectRide.isPending}
         >
           <p className="text-sm text-ink">{rideRequestNotification.message}</p>
+        </Modal>
+      )}
+
+      {cancelledNotification && (
+        <Modal
+          open={true}
+          title="Ride Cancelled"
+          description="The ride request was cancelled."
+          confirmLabel="Dismiss"
+          cancelLabel="Close"
+          onConfirm={() => markNotificationRead.mutate(cancelledNotification.id)}
+          onCancel={() => markNotificationRead.mutate(cancelledNotification.id)}
+          loading={markNotificationRead.isPending}
+        >
+          <p className="text-sm text-ink">{cancelledNotification.message}</p>
         </Modal>
       )}
 

@@ -20,6 +20,16 @@ public class NotificationService {
      * Creates and persists a new notification for the given user.
      */
     public NotificationResponse createNotification(String userId, NotificationType type, String message, String relatedId) {
+        if (type == NotificationType.RIDE_CANCELLED && relatedId != null) {
+            List<Notification> requests = notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId).stream()
+                .filter(n -> n.getType() == NotificationType.RIDE_REQUESTED && relatedId.equals(n.getRelatedId()))
+                .toList();
+            for (Notification n : requests) {
+                n.setIsRead(true);
+                notificationRepository.save(n);
+            }
+        }
+
         Notification notification = Notification.builder()
                 .userId(userId)
                 .type(type)

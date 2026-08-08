@@ -55,7 +55,7 @@ export function RideTimeline({ ride }: { ride: Ride }) {
                 {isCurrent && (
                   <span
                     className="size-2 rounded-full bg-current"
-                    style={{ animation: 'ridepulse 1.8s ease-in-out infinite' }}
+                    style={{ animation: 'ridepulse 2s ease-in-out infinite' }}
                   />
                 )}
                 {isDone && (
@@ -102,7 +102,20 @@ export function RideTimeline({ ride }: { ride: Ride }) {
         )
       })}
 
-      <style>{`@keyframes ridepulse { 0%,100% { opacity: 1 } 50% { opacity: 0.3 } }`}</style>
+      <style>{`
+        @keyframes ridepulse { 
+          0%, 100% { 
+            transform: scale(0.85);
+            opacity: 0.8;
+            filter: drop-shadow(0 0 2px currentColor);
+          } 
+          50% { 
+            transform: scale(1.15);
+            opacity: 1;
+            filter: drop-shadow(0 0 5px currentColor);
+          } 
+        }
+      `}</style>
     </ol>
   )
 }

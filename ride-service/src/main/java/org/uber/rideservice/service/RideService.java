@@ -188,7 +188,17 @@ public class RideService {
         }
 
         if (ride.getDriverId() != null) {
+            if (ride.getStartedAt() != null) {
+                // Driver started the trip -> base fare + fine
+                ride.setFinalFare(250.0);
+            } else {
+                // Driver matched but not started -> base fare
+                ride.setFinalFare(200.0);
+            }
             setDriverAvailability(ride.getDriverId(), true);
+        } else if (ride.getPendingDriverId() != null) {
+            // Cancelled before driver matched (while pinging)
+            // No charge
         }
 
         ride.setStatus(RideStatus.CANCELLED);
@@ -345,6 +355,7 @@ public class RideService {
                 .rideId(ride.getId())
                 .riderId(ride.getRiderId())
                 .driverId(ride.getDriverId())
+                .pendingDriverId(ride.getPendingDriverId())
                 .status(ride.getStatus())
                 .message(message)
                 .timestamp(LocalDateTime.now())
