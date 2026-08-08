@@ -32,3 +32,14 @@ GET http://localhost:8084/api/payments/000000000000000000000000
         client.assert(response.status === 404, "Expected 404 Not Found");
     });
 %}
+
+###
+
+### 3. Get payment by ride id (replace with a real ride id once one exists)
+GET http://localhost:8084/api/payments/ride/ride-123
+
+> {%
+    client.test("Missing payment by ride returns 404", function() {
+        client.assert(response.status === 404, "Expected 404 Not Found");
+    });
+%}

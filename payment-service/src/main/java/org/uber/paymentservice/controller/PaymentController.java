@@ -31,4 +31,10 @@ public class PaymentController {
         PaymentResponse payment = paymentService.getPayment(id);
         return ResponseEntity.ok(payment);
     }
+
+    @GetMapping("/ride/{rideId}")
+    public ResponseEntity<PaymentResponse> getPaymentByRideId(@PathVariable String rideId) {
+        PaymentResponse payment = paymentService.getPaymentByRideId(rideId);
+        return ResponseEntity.ok(payment);
+    }
 }

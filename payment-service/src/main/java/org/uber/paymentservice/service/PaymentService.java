@@ -42,6 +42,16 @@ public class PaymentService {
         return toResponse(payment);
     }
 
+    /**
+     * Returns a payment record by its associated ride id.
+     */
+    public PaymentResponse getPaymentByRideId(String rideId) {
+        Payment payment = paymentRepository.findByRideId(rideId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found for rideId: " + rideId));
+
+        return toResponse(payment);
+    }
+
     private PaymentResponse toResponse(Payment payment) {
         return PaymentResponse.builder()
                 .id(payment.getId())
