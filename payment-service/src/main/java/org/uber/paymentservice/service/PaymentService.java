@@ -1,11 +1,14 @@
 package org.uber.paymentservice.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.uber.paymentservice.dto.ProcessPaymentRequest;
 import org.uber.paymentservice.dto.CalculateFareRequest;
+import org.uber.paymentservice.dto.PaymentCompletedEvent;
 import org.uber.paymentservice.dto.PaymentResponse;
 import org.uber.paymentservice.exception.ResourceNotFoundException;
+import org.uber.paymentservice.config.RabbitMQConfig;
 import org.uber.paymentservice.model.Payment;
 import org.uber.paymentservice.model.PaymentStatus;
 import org.uber.paymentservice.repository.PaymentRepository;
@@ -21,6 +24,7 @@ public class PaymentService {
     private static final double PER_KM_RATE = 15.0;
 
     private final PaymentRepository paymentRepository;
+    private final RabbitTemplate rabbitTemplate;
 
     /**
      * Calculates the ride fare using the report's simplified formula.
@@ -68,6 +72,7 @@ public class PaymentService {
         payment.setCompletedAt(LocalDateTime.now());
 
         Payment savedPayment = paymentRepository.save(payment);
+        publishPaymentCompleted(savedPayment);
         return toResponse(savedPayment);
     }
 
@@ -122,5 +127,17 @@ public class PaymentService {
                 .completedAt(payment.getCompletedAt())
                 .updatedAt(payment.getUpdatedAt())
                 .build();
+    }
+
+    private void publishPaymentCompleted(Payment payment) {
+        PaymentCompletedEvent event = PaymentCompletedEvent.builder()
+                .paymentId(payment.getId())
+                .riderId(payment.getRiderId())
+                .amount(payment.getAmount())
+                .status(payment.getStatus())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.PAYMENT_COMPLETED_ROUTING_KEY, event);
     }
 }
