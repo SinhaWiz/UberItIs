@@ -2,7 +2,7 @@
 
 ## Context
 
-The backend is functionally complete for the core ride lifecycle: `user-service` (auth + profiles), `driver-service` (vehicle profiles, availability, location), `ride-service` (full request → match → start → complete/cancel lifecycle), plus `eureka-server` and `api-gateway`. `payment-service` and `notification-service` remain bare skeletons.
+The backend is functionally complete for the core ride lifecycle: `user-service` (auth + profiles), `driver-service` (vehicle profiles, availability, location), `ride-service` (full request → match → start → complete/cancel lifecycle), `payment-service` (fare calculation, Stripe-backed processing), `notification-service` (consumes `ride.status.changed`/`payment.completed`, exposes read/unread/mark-as-read), plus `eureka-server` and `api-gateway`.
 
 There is **no frontend code in the repository today**. This plan covers building one from scratch, phase by phase.
 
@@ -64,8 +64,8 @@ These are real limits of the current backend that directly shape what the UI can
 | 2 | **No WebSocket / push** anywhere | All live updates are **polling**. Rider polls their active ride; driver polls for assigned rides |
 | 3 | **No driver "incoming request" endpoint.** `PUT /api/rides/{id}/match` is rider-triggered and auto-picks the first available driver | Driver cannot accept/reject (report UC-D06/D07 is unbuildable as specified). Driver discovers assigned rides by polling `GET /api/rides/driver/{driverId}` and filtering for `MATCHED`/`IN_PROGRESS` |
 | 4 | **No map / geocoding service.** `pickupLocation` / `dropoffLocation` are free-text strings | Text inputs, not a map picker. `RideRequest` does accept optional `pickupLat`/`pickupLng`, so a coordinate field is possible, but there is no map provider to render |
-| 5 | **`payment-service` is a skeleton.** `finalFare` is a flat `50.0` placeholder copied from `fareEstimate` | Show fare read-only. No payment method / checkout UI until the service exists |
-| 6 | **`notification-service` is a skeleton.** No `/api/notifications/**` endpoints respond | No notification centre. Defer to Phase 8 |
+| 5 | `payment-service` is now implemented (fare calculation, Stripe-backed processing) | Payment method / checkout UI is buildable — no longer blocked |
+| 6 | `notification-service` is now implemented. `GET /api/notifications/user/{userId}` (+ `/unread`, `PUT /{id}/read`) respond | Notification centre is buildable — no longer blocked |
 | 7 | **No admin statistics endpoint** | Admin stats derived client-side from `GET /api/users` and `GET /api/rides/active` |
 | 8 | **JWT expires in 24h**; claims are `sub` = userId, `role` = RIDER/DRIVER/ADMIN | Store token + decode role for guards; handle 401 by redirecting to login |
 | 9 | **Driver onboarding is two steps** — register user (`role: DRIVER`), *then* create a driver profile with vehicle details | Driver signup is a 2-step wizard, not one form |
@@ -203,8 +203,8 @@ Not buildable until the corresponding services exist. Listed so scope is explici
 
 | Feature | Blocked on | Notes |
 |---|---|---|
-| Payment / checkout UI | `payment-service` | Fare display already in place; needs `POST /api/payments/process` and real fare calculation |
-| Notification centre | `notification-service` | Needs `GET /api/notifications/user/{userId}` + unread/read endpoints; would replace polling with a real feed |
+| Payment / checkout UI | `payment-service` — **backend ready** | `payment-service` is implemented; this is now a frontend-only build, not backend-blocked |
+| Notification centre | `notification-service` — **backend ready** | `notification-service` is implemented (`GET /api/notifications/user/{userId}` + unread/read endpoints); would replace polling with a real feed. Now a frontend-only build |
 | Driver accept/reject | New ride-service endpoint | Requires a pending-requests endpoint per Constraint 3 before UC-D06/D07 can be built |
 | Map view / live tracking | Location service or map provider | Report explicitly scopes real-time GPS out |
 

@@ -97,7 +97,7 @@ org.uber.rideservice
 |------|--------|-------|
 | Stripe Integration | **Frontend Delegated** | `RideService` asks for fare calculation from `PaymentService`, but the actual Stripe intent handling is driven by the frontend. |
 | Real geospatial driver matching | **Not Implemented** | `matchDriver` picks the first available driver. `pickupLat`/`pickupLng` exist on `RideRequest` but aren't yet wired to driver-service's `/api/drivers/nearby` endpoint. |
-| Notification Service consumption | **Not Implemented** | `ride.status.changed` events are published to `ride.status.queue`, but no consumer exists yet. |
+| Notification Service consumption | **Implemented** | `ride.status.changed` events published to `ride.status.queue` are now consumed by `notification-service`'s `RideStatusEventListener`. See `docs/notification-service-doc.md`. |
 | Input validation | **Basic only** | No `@Valid` / `@NotBlank` annotations, consistent with User Service and Driver Service. |
 | Concurrent active-ride limits | **Not Implemented** | A rider or driver can theoretically be linked to multiple in-flight rides if endpoints are called out of the expected order. |
 

@@ -83,7 +83,7 @@ org.uber.paymentservice
 |------|--------|-------|
 | External payment gateway | **Implemented (Sandbox)** | Payment integrates with Stripe via `stripe-java`. Real charges are not made (sandbox mode). |
 | Payment retries / failure workflow | **Not Implemented** | `FAILED` and `REFUNDED` exist in the enum but are not yet used by any endpoint. |
-| Notification Service consumer | **Not Implemented** | `payment.completed` is published, but the consumer service is still a skeleton. |
+| Notification Service consumer | **Implemented (rider only)** | `payment.completed` is consumed by `notification-service`'s `PaymentEventListener`, which notifies the rider. `PaymentCompletedEvent` doesn't carry `driverId`, so the driver isn't notified yet — see `docs/notification-service-doc.md` and `AGENTS.md` §item 6. |
 | Input validation annotations | **Basic only** | Negative and missing distance are checked manually; no Bean Validation annotations are used. |
 
 ## How to Test

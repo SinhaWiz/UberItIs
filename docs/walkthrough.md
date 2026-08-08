@@ -42,9 +42,9 @@ Created a comprehensive High-Level Design (HLD) project report for a ride-sharin
 ### Business Services
 - **User Service (`8081`):** Fully implemented. Handles JWT authentication, registration, and user profiles. Uses MongoDB database `uber_user_db`.
 - **Driver Service (`8083`):** Fully implemented. Manages driver profiles, location, and availability. Communicates synchronously with User Service using a `@LoadBalanced` `RestTemplate`. Uses MongoDB database `uber_driver_db`.
-- **Ride Service (`8082`):** Skeleton created. Pending implementation.
-- **Payment Service (`8084`):** Skeleton created. Pending implementation.
-- **Notification Service (`8085`):** Skeleton created. Pending implementation.
+- **Ride Service (`8082`):** Fully implemented. Owns the ride lifecycle (request → match → in-progress → completed/cancelled), publishes `ride.status.changed` events. Uses MongoDB database `uber_ride_db`.
+- **Payment Service (`8084`):** Fully implemented. Fare calculation and Stripe-backed payment processing, publishes `payment.completed` events. Uses MongoDB database `uber_payment_db`.
+- **Notification Service (`8085`):** Fully implemented. Consumes `ride.status.changed` and `payment.completed` via RabbitMQ, exposes read/unread/mark-as-read endpoints. Uses MongoDB database `uber_notification_db`.
 
 ### Testing & Validation
 - Standardized IntelliJ HTTP Client files created in `./requests/`.

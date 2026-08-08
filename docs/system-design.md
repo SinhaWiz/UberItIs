@@ -79,10 +79,13 @@ Or just run each `*Application.java` from IntelliJ.
 > Unavailable` — this is expected, not a bug.
 
 Check <http://localhost:8761> — you should see `API-GATEWAY`, `USER-SERVICE`,
-`DRIVER-SERVICE` and `RIDE-SERVICE` registered.
+`DRIVER-SERVICE`, `RIDE-SERVICE`, `PAYMENT-SERVICE`, and `NOTIFICATION-SERVICE`
+registered.
 
-`payment-service` (8084) and `notification-service` (8085) are empty skeletons.
-Starting them does nothing useful; skipping them changes nothing.
+`payment-service` (8084) and `notification-service` (8085) are now implemented
+(see `docs/payment-service-doc.md` and `docs/notification-service-doc.md`) and
+should be started alongside the others — `notification-service` also requires
+RabbitMQ to be running (`docker compose up -d` from the project root).
 
 ## Step 5 — Start the web UI
 
@@ -125,8 +128,8 @@ graph TB
         US["user-service :8081"]
         RS["ride-service :8082"]
         DS["driver-service :8083"]
-        PS["payment-service :8084<br/>(skeleton)"]
-        NS["notification-service :8085<br/>(skeleton)"]
+        PS["payment-service :8084"]
+        NS["notification-service :8085"]
     end
 
     subgraph Data["MongoDB Atlas — one database per service"]
@@ -384,12 +387,13 @@ block rides.
 | Routing key | `ride.status.changed` |
 | Queue | `ride.status.queue` |
 | Payload | `RideStatusChangedEvent` — rideId, riderId, driverId, status, message, timestamp |
-| Consumer | none yet — `notification-service` is a skeleton |
+| Consumer | `notification-service`'s `RideStatusEventListener` |
 
-Messages are serialised as JSON rather than Java objects, so a future consumer
-isn't forced to share the publisher's classes. Events are published and queued
-today; with no consumer running they simply accumulate in `ride.status.queue`,
-which you can watch in the RabbitMQ management UI.
+Messages are serialised as JSON rather than Java objects, so the consumer
+isn't forced to share the publisher's classes — `notification-service` defines
+its own structurally-identical local copy of the event and status enum rather
+than importing `ride-service`'s. You can still watch traffic on both queues in
+the RabbitMQ management UI.
 
 ---
 
@@ -415,8 +419,8 @@ Being explicit about this matters more than pretending completeness.
 
 | Gap | Effect |
 |---|---|
-| `payment-service` is a skeleton | Fares are a flat `50.0` placeholder. `ride-service.processPayment()` is a documented stub that skips the call and copies the estimate to `finalFare` |
-| `notification-service` is a skeleton | Events are published but nothing consumes them |
+| `ride-service.processPayment()` is a documented stub | `payment-service` itself is implemented (fare calculation, Stripe-backed processing), but `ride-service` only calls its `/api/payments/calculate` endpoint for the fare estimate — `processPayment()` just copies that estimate to `finalFare` rather than calling `/api/payments/process` to actually record the payment |
+| `notification-service` only notifies the rider on payment completion | `PaymentCompletedEvent` doesn't carry `driverId`, so `notification-service`'s `PaymentEventListener` can't notify the driver yet — see `AGENTS.md` item 6 |
 | No driver accept/reject | Matching is rider-triggered and auto-picks the first available driver. There is no endpoint for a driver to accept or decline |
 | No retries or circuit breakers | One slow dependency directly slows the caller; there's no Resilience4j |
 | No real-time push | The UI polls: 4s for an active ride, 5s for the driver dashboard, 10s for admin tables |
