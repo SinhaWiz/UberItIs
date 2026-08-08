@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.uber.paymentservice.dto.CalculateFareRequest;
 import org.uber.paymentservice.dto.PaymentResponse;
+import org.uber.paymentservice.exception.ResourceNotFoundException;
 import org.uber.paymentservice.model.Payment;
 import org.uber.paymentservice.repository.PaymentRepository;
 
@@ -36,7 +37,7 @@ public class PaymentService {
      */
     public PaymentResponse getPayment(String id) {
         Payment payment = paymentRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Payment not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + id));
 
         return toResponse(payment);
     }
