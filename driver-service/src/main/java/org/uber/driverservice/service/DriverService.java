@@ -21,7 +21,7 @@ public class DriverService {
 
     /**
      * Creates a new driver profile after validating that the user exists in the User Service.
-     * Ensures no duplicate profile exists for the same userId.
+     * Ensures no duplicate profile exists for the same userId or vehicle plate.
      */
     public DriverProfileResponse createProfile(DriverProfileRequest request) {
         validateUserExists(request.getUserId());
@@ -29,6 +29,10 @@ public class DriverService {
         if (driverProfileRepository.existsByUserId(request.getUserId())) {
             throw new DuplicateResourceException(
                     "Driver profile already exists for userId: " + request.getUserId());
+        }
+        if (driverProfileRepository.existsByVehiclePlate(request.getVehiclePlate())) {
+            throw new DuplicateResourceException(
+                    "Vehicle plate already registered: " + request.getVehiclePlate());
         }
 
         DriverProfile profile = DriverProfile.builder()
@@ -65,6 +69,10 @@ public class DriverService {
             profile.setVehicleModel(request.getVehicleModel());
         }
         if (request.getVehiclePlate() != null) {
+            if (driverProfileRepository.existsByVehiclePlateAndUserIdNot(request.getVehiclePlate(), userId)) {
+                throw new DuplicateResourceException(
+                        "Vehicle plate already registered: " + request.getVehiclePlate());
+            }
             profile.setVehiclePlate(request.getVehiclePlate());
         }
         if (request.getVehicleColor() != null) {
