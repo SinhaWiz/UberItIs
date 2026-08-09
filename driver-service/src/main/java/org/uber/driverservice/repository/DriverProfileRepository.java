@@ -14,10 +14,6 @@ public interface DriverProfileRepository extends MongoRepository<DriverProfile, 
 
     boolean existsByUserId(String userId);
 
-    boolean existsByVehiclePlate(String vehiclePlate);
-
-    boolean existsByVehiclePlateAndUserIdNot(String vehiclePlate, String userId);
-
     List<DriverProfile> findByIsAvailableTrue();
 
     List<DriverProfile> findByIsAvailableTrueAndCurrentLatitudeBetweenAndCurrentLongitudeBetween(

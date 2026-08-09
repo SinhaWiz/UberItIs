@@ -19,4 +19,5 @@ public class CreatePaymentIntentRequest {
     private Double pickupLng;
     private Double dropoffLat;
     private Double dropoffLng;
+    private Double finalFare;
 }

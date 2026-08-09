@@ -31,11 +31,6 @@ public class DriverService {
                     "Driver profile already exists for userId: " + request.getUserId());
         }
 
-        if (driverProfileRepository.existsByVehiclePlate(request.getVehiclePlate())) {
-            throw new DuplicateResourceException(
-                    "Vehicle plate already registered: " + request.getVehiclePlate());
-        }
-
         DriverProfile profile = DriverProfile.builder()
                 .userId(request.getUserId())
                 .vehicleModel(request.getVehicleModel())
@@ -70,10 +65,6 @@ public class DriverService {
             profile.setVehicleModel(request.getVehicleModel());
         }
         if (request.getVehiclePlate() != null) {
-            if (driverProfileRepository.existsByVehiclePlateAndUserIdNot(request.getVehiclePlate(), userId)) {
-                throw new DuplicateResourceException(
-                        "Vehicle plate already registered: " + request.getVehiclePlate());
-            }
             profile.setVehiclePlate(request.getVehiclePlate());
         }
         if (request.getVehicleColor() != null) {
