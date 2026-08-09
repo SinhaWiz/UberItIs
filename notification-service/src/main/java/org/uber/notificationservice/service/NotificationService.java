@@ -17,32 +17,51 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
 
     /**
-     * Persists a notification for a user. Called by the RabbitMQ event listeners
-     * as a fire-and-forget operation — failures here should not propagate back
-     * to the publishing service.
+     * Creates and persists a new notification for the given user.
      */
-    public void createNotification(String userId, NotificationType type, String message) {
+    public NotificationResponse createNotification(String userId, NotificationType type, String message, String relatedId) {
+        if (type == NotificationType.RIDE_CANCELLED && relatedId != null) {
+            List<Notification> requests = notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId).stream()
+                .filter(n -> n.getType() == NotificationType.RIDE_REQUESTED && relatedId.equals(n.getRelatedId()))
+                .toList();
+            for (Notification n : requests) {
+                n.setIsRead(true);
+                notificationRepository.save(n);
+            }
+        }
+
         Notification notification = Notification.builder()
                 .userId(userId)
                 .type(type)
                 .message(message)
+                .relatedId(relatedId)
                 .build();
 
-        notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
+        return toResponse(saved);
     }
 
-    public List<NotificationResponse> getUserNotifications(String userId) {
-        return notificationRepository.findByUserId(userId).stream()
+    /**
+     * Returns all notifications for a user, newest first.
+     */
+    public List<NotificationResponse> getNotificationsByUserId(String userId) {
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    public List<NotificationResponse> getUnreadNotifications(String userId) {
-        return notificationRepository.findByUserIdAndIsReadFalse(userId).stream()
+    /**
+     * Returns only unread notifications for a user, newest first.
+     */
+    public List<NotificationResponse> getUnreadNotificationsByUserId(String userId) {
+        return notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
+    /**
+     * Marks a single notification as read.
+     */
     public NotificationResponse markAsRead(String id) {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found with id: " + id));
@@ -52,12 +71,16 @@ public class NotificationService {
         return toResponse(updated);
     }
 
+    /**
+     * Maps a Notification entity to a NotificationResponse DTO.
+     */
     private NotificationResponse toResponse(Notification notification) {
         return NotificationResponse.builder()
                 .id(notification.getId())
                 .userId(notification.getUserId())
                 .type(notification.getType())
                 .message(notification.getMessage())
+                .relatedId(notification.getRelatedId())
                 .isRead(notification.getIsRead())
                 .createdAt(notification.getCreatedAt())
                 .build();

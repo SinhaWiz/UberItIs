@@ -11,6 +11,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -37,6 +38,11 @@ public class Ride {
     private Double dropoffLat;
     private Double dropoffLng;
 
+    private String pendingDriverId;
+
+    @Builder.Default
+    private List<String> rejectedDriverIds = new java.util.ArrayList<>();
+
     @Builder.Default
     private RideStatus status = RideStatus.REQUESTED;
 
@@ -44,6 +50,9 @@ public class Ride {
     private Double fareEstimate = 0.0;
 
     private Double finalFare;
+
+    @Builder.Default
+    private Boolean isPaid = false;
 
     @CreatedDate
     private LocalDateTime requestedAt;

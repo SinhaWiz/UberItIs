@@ -38,6 +38,22 @@ public class RideController {
         return ResponseEntity.ok(ride);
     }
 
+    @PutMapping("/{id}/accept")
+    public ResponseEntity<RideResponse> acceptRide(
+            @PathVariable String id,
+            @RequestParam String driverId) {
+        RideResponse ride = rideService.acceptRide(id, driverId);
+        return ResponseEntity.ok(ride);
+    }
+
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<RideResponse> rejectRide(
+            @PathVariable String id,
+            @RequestParam String driverId) {
+        RideResponse ride = rideService.rejectRide(id, driverId);
+        return ResponseEntity.ok(ride);
+    }
+
     @PutMapping("/{id}/start")
     public ResponseEntity<RideResponse> startRide(@PathVariable String id) {
         RideResponse ride = rideService.startRide(id);

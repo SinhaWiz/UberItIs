@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.uber.rideservice.model.RideStatus;
 
 import java.time.LocalDateTime;
 
@@ -12,13 +11,12 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RideStatusChangedEvent {
-
+public class PaymentCompletedEvent {
+    private String paymentId;
     private String rideId;
     private String riderId;
     private String driverId;
-    private String pendingDriverId;
-    private RideStatus status;
-    private String message;
+    private Double amount;
+    private String status;
     private LocalDateTime timestamp;
 }
