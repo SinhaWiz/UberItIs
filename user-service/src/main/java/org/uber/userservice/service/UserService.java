@@ -22,11 +22,14 @@ public class UserService {
     private final JwtUtil jwtUtil;
 
     /**
-     * Registers a new user after validating email uniqueness and hashing the password.
+     * Registers a new user after validating email/phone uniqueness and hashing the password.
      */
     public UserResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateResourceException("Email already registered: " + request.getEmail());
+        }
+        if (userRepository.existsByPhone(request.getPhone())) {
+            throw new DuplicateResourceException("Phone already registered: " + request.getPhone());
         }
 
         User user = User.builder()
@@ -82,6 +85,9 @@ public class UserService {
             user.setName(request.getName());
         }
         if (request.getPhone() != null) {
+            if (userRepository.existsByPhoneAndIdNot(request.getPhone(), id)) {
+                throw new DuplicateResourceException("Phone already registered: " + request.getPhone());
+            }
             user.setPhone(request.getPhone());
         }
         if (request.getRole() != null) {
