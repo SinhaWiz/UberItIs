@@ -27,6 +27,7 @@ public class DriverProfile {
 
     private String vehicleModel;
 
+    @Indexed(unique = true)
     private String vehiclePlate;
 
     private String vehicleColor;
