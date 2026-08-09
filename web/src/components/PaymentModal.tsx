@@ -27,7 +27,7 @@ interface PaymentModalProps {
   ride: Ride
 }
 
-function CheckoutForm({ clientSecret, amount, ride, onSuccess }: PaymentModalProps) {
+function CheckoutForm({ clientSecret, amount, ride, onSuccess, onClose }: PaymentModalProps) {
   const stripe = useStripe()
   const elements = useElements()
   const [loading, setLoading] = useState(false)
@@ -109,7 +109,10 @@ function CheckoutForm({ clientSecret, amount, ride, onSuccess }: PaymentModalPro
 
       {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
 
-      <div className="flex flex-col gap-3">
+      <div className="flex gap-3">
+        <Button variant="secondary" onClick={onClose} fullWidth type="button">
+          Cancel
+        </Button>
         <Button loading={loading || !stripe} fullWidth type="submit">
           Pay {formatFare(amount)}
         </Button>
@@ -132,6 +135,7 @@ export function PaymentModal(props: PaymentModalProps) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40"
+      onClick={props.onClose}
     >
       <div
         className="w-full max-w-sm bg-elevated border border-line rounded-[var(--radius-card)] p-5 flex flex-col gap-4 shadow-[var(--shadow-card)]"

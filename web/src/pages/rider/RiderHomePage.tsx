@@ -3,12 +3,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCurrentUser } from '../../auth/AuthContext'
 import { SkeletonCard } from '../../components/Skeleton'
 import { queryKeys, useRidesByRider } from '../../hooks/queries'
+import { ACTIVE_STATUSES, type Ride } from '../../types'
 import { ActiveRide } from './ActiveRide'
 import { RequestRideForm } from './RequestRideForm'
-import { isTerminal, type Ride } from '../../types'
 
 function findActiveRide(rides: Ride[] | undefined): Ride | undefined {
-  return rides?.find((ride) => !isTerminal(ride))
+  return rides?.find((ride) => ACTIVE_STATUSES.includes(ride.status))
 }
 
 export function RiderHomePage() {

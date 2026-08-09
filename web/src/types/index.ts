@@ -21,10 +21,8 @@ export const ACTIVE_STATUSES: RideStatus[] = [
   'IN_PROGRESS',
 ]
 
-export function isTerminal(ride: Pick<Ride, 'status' | 'isPaid' | 'finalFare'>): boolean {
-  if (ride.status === 'COMPLETED' && ride.isPaid) return true
-  if (ride.status === 'CANCELLED') return true
-  return false
+export function isTerminal(status: RideStatus): boolean {
+  return status === 'COMPLETED' || status === 'CANCELLED'
 }
 
 /* ---------- user-service ---------- */
@@ -103,7 +101,6 @@ export interface Ride {
   id: string
   riderId: string
   driverId: string | null
-  pendingDriverId: string | null
   pickupLocation: string
   dropoffLocation: string
   pickupLat?: number
@@ -111,9 +108,8 @@ export interface Ride {
   dropoffLat?: number
   dropoffLng?: number
   status: RideStatus
-  fareEstimate?: number
-  finalFare?: number
-  isPaid?: boolean
+  fareEstimate: number | null
+  finalFare: number | null
   requestedAt: string | null
   matchedAt: string | null
   startedAt: string | null
@@ -139,12 +135,19 @@ export interface MatchDriverRequest {
 
 /* ---------- notification-service ---------- */
 
-export interface Notification {
+export type NotificationType =
+  | 'RIDE_REQUESTED'
+  | 'RIDE_MATCHED'
+  | 'RIDE_STARTED'
+  | 'RIDE_COMPLETED'
+  | 'RIDE_CANCELLED'
+  | 'PAYMENT_COMPLETED'
+
+export interface AppNotification {
   id: string
   userId: string
-  type: string
+  type: NotificationType
   message: string
-  relatedId: string | null
   isRead: boolean
   createdAt: string
 }

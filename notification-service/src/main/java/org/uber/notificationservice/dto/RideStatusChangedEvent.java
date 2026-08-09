@@ -4,14 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.uber.notificationservice.model.RideStatus;
 
 import java.time.LocalDateTime;
 
-/**
- * Mirrors the RideStatusChangedEvent published by ride-service.
- * The status field is a String here (not an enum) so deserialization
- * does not depend on ride-service's RideStatus enum being on the classpath.
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -21,8 +17,7 @@ public class RideStatusChangedEvent {
     private String rideId;
     private String riderId;
     private String driverId;
-    private String pendingDriverId;
-    private String status;
+    private RideStatus status;
     private String message;
     private LocalDateTime timestamp;
 }

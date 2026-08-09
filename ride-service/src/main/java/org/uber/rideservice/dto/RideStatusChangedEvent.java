@@ -17,7 +17,6 @@ public class RideStatusChangedEvent {
     private String rideId;
     private String riderId;
     private String driverId;
-    private String pendingDriverId;
     private RideStatus status;
     private String message;
     private LocalDateTime timestamp;

@@ -4,13 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.uber.notificationservice.model.PaymentStatus;
 
 import java.time.LocalDateTime;
 
-/**
- * Mirrors the PaymentCompletedEvent published by payment-service.
- * The status field is a String here to avoid cross-service enum coupling.
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -18,10 +15,8 @@ import java.time.LocalDateTime;
 public class PaymentCompletedEvent {
 
     private String paymentId;
-    private String rideId;
     private String riderId;
-    private String driverId;
     private Double amount;
-    private String status;
+    private PaymentStatus status;
     private LocalDateTime timestamp;
 }

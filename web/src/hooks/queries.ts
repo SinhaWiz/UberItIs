@@ -26,7 +26,6 @@ export const queryKeys = {
   users: ['users', 'all'] as const,
   driverProfile: (userId: string) => ['drivers', userId] as const,
   notifications: (userId: string) => ['notifications', userId] as const,
-  paymentByRide: (rideId: string) => ['payments', 'ride', rideId] as const,
 }
 
 /** Polls a single ride until it reaches a terminal status. */
@@ -37,7 +36,7 @@ export function useRide(rideId: string | null) {
     enabled: rideId !== null,
     refetchInterval: (query) => {
       const ride = query.state.data as Ride | undefined
-      return ride && isTerminal(ride) ? false : RIDE_POLL_MS
+      return ride && isTerminal(ride.status) ? false : RIDE_POLL_MS
     },
   })
 }
@@ -95,20 +94,12 @@ export function useDriverProfile(userId: string | null | undefined) {
   })
 }
 
-export function useNotifications(userId: string | null | undefined, poll = true) {
+/** Polled so ride/payment events show up without a manual refresh. */
+export function useNotifications(userId: string | null | undefined) {
   return useQuery({
     queryKey: queryKeys.notifications(userId ?? ''),
-    queryFn: () => api.get<import('../types').Notification[]>(`/api/notifications/user/${userId}/unread`),
+    queryFn: () => api.get<AppNotification[]>(`/api/notifications/user/${userId}`),
     enabled: Boolean(userId),
-    refetchInterval: poll ? 3_000 : false,
-  })
-}
-
-export function usePaymentByRide(rideId: string | null | undefined) {
-  return useQuery({
-    queryKey: queryKeys.paymentByRide(rideId ?? ''),
-    queryFn: () => api.get<any>(`/api/payments/ride/${rideId}`),
-    enabled: Boolean(rideId),
-    retry: false, // 404 is a valid state if payment doesn't exist yet
+    refetchInterval: NOTIFICATION_POLL_MS,
   })
 }

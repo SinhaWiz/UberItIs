@@ -1,7 +1,7 @@
 # Notification Service — Implementation Documentation
 
 ## Overview
-The Notification Service (port `8085`) is the asynchronous event consumer of the ride-sharing system. It listens on two RabbitMQ queues — `ride.status.queue` and `payment.queue` — and transforms incoming events into user-facing notification records stored in MongoDB. It exposes read-only REST endpoints for the frontend to query and mark notifications as read.
+The Notification Service (port `8085`) consumes asynchronous events from RabbitMQ and persists notifications for riders and drivers. It has no synchronous callers — Ride Service and Payment Service publish events fire-and-forget, and this service is solely responsible for turning those events into per-user notification records that clients can poll via REST. It never blocks or fails the publishing service's request.
 
 ## Data Model
 The `Notification` entity stores the following fields in the `notifications` collection within `uber_notification_db`:
@@ -9,99 +9,90 @@ The `Notification` entity stores the following fields in the `notifications` col
 | Field | Type | Notes |
 |-------|------|-------|
 | `id` | String | Auto-generated MongoDB ObjectId |
-| `userId` | String | Indexed, references the user who receives the notification |
+| `userId` | String | References User Service user ID (rider or driver) |
 | `type` | Enum | `RIDE_REQUESTED`, `RIDE_MATCHED`, `RIDE_STARTED`, `RIDE_COMPLETED`, `RIDE_CANCELLED`, `PAYMENT_COMPLETED` |
 | `message` | String | Human-readable notification text |
 | `isRead` | Boolean | Defaults to `false` |
 | `createdAt` | LocalDateTime | Auto-set via `@CreatedDate` |
 
+## RabbitMQ Queues Consumed
+
+| Queue | Routing Key | Event Payload | Action |
+|-------|-------------|----------------|--------|
+| `ride.status.queue` | `ride.status.changed` | `rideId, riderId, driverId, status, message, timestamp` | Creates a notification for the rider, and the driver if assigned |
+| `payment.queue` | `payment.completed` | `paymentId, riderId, amount, status, timestamp` | Creates a `PAYMENT_COMPLETED` notification for the rider |
+
+Both queues are bound to the shared `uber.exchange` topic exchange, the same exchange ride-service and payment-service publish to.
+
 ## REST API Endpoints
 
 | Method | Endpoint | Description | Status Codes |
 |--------|----------|-------------|--------------|
-| GET | `/api/notifications/user/{userId}` | Get all notifications for a user (newest first) | 200 |
-| GET | `/api/notifications/user/{userId}/unread` | Get unread notifications for a user (newest first) | 200 |
+| GET | `/api/notifications/user/{userId}` | Get all notifications for a user | 200 |
+| GET | `/api/notifications/user/{userId}/unread` | Get unread notifications for a user | 200 |
 | PUT | `/api/notifications/{id}/read` | Mark a notification as read | 200, 404 |
 
-## RabbitMQ Queues Consumed
-
-| Queue | Routing Key | Source Service | Action |
-|-------|-------------|----------------|--------|
-| `ride.status.queue` | `ride.status.changed` | Ride Service | Creates notification(s) for rider and driver about ride status changes |
-| `payment.queue` | `payment.completed` | Payment Service | Creates notification for rider about successful payment |
-
-### Ride Status Event → Notification Mapping
-
-| Ride Status | NotificationType | Rider Message | Driver Message |
-|-------------|-----------------|---------------|----------------|
-| `REQUESTED` | `RIDE_REQUESTED` | "Your ride has been requested. Looking for a nearby driver..." | *(no driver yet)* |
-| `MATCHED` | `RIDE_MATCHED` | "A driver has been matched to your ride!" | "You have been matched to a new ride. Head to the pickup location." |
-| `IN_PROGRESS` | `RIDE_STARTED` | "Your ride has started. Enjoy the trip!" | "The ride is now in progress." |
-| `COMPLETED` | `RIDE_COMPLETED` | "Your ride is complete. Please proceed with payment." | "The ride is complete. Awaiting payment confirmation." |
-| `CANCELLED` | `RIDE_CANCELLED` | "Your ride has been cancelled." | "The ride has been cancelled." |
-
-### Payment Event → Notification Mapping
-
-| Event | NotificationType | Rider Message |
-|-------|-----------------|---------------|
-| `payment.completed` | `PAYMENT_COMPLETED` | "Payment of ৳{amount} has been completed successfully." |
+There is intentionally no create endpoint — notifications can only be produced by consuming a RabbitMQ event.
 
 ## Package Structure
 ```
 org.uber.notificationservice
-├── NotificationServiceApplication.java      # Spring Boot entry point
+├── NotificationServiceApplication.java  # Spring Boot entry point
 ├── config/
-│   ├── MongoConfig.java                     # @EnableMongoAuditing
-│   └── RabbitMQConfig.java                  # Exchange, queues, bindings, JSON converter, listener factory
+│   ├── MongoConfig.java                 # @EnableMongoAuditing
+│   └── RabbitMQConfig.java              # Exchange, queues, bindings, JSON converter
 ├── controller/
-│   └── NotificationController.java          # REST endpoints
+│   └── NotificationController.java      # REST endpoints
 ├── dto/
-│   ├── NotificationResponse.java            # Output DTO
-│   ├── PaymentCompletedEvent.java           # Consumer-side event DTO (mirrors payment-service publisher)
-│   └── RideStatusChangedEvent.java          # Consumer-side event DTO (mirrors ride-service publisher)
+│   ├── NotificationResponse.java        # Output DTO
+│   ├── RideStatusChangedEvent.java      # Consumer-side mirror of ride-service's event
+│   └── PaymentCompletedEvent.java       # Consumer-side mirror of payment-service's event
 ├── exception/
-│   ├── GlobalExceptionHandler.java          # Centralized error handling
-│   └── ResourceNotFoundException.java       # 404 errors
+│   ├── ResourceNotFoundException.java   # 404 errors
+│   └── GlobalExceptionHandler.java      # Centralized error handling
 ├── listener/
-│   ├── PaymentCompletedListener.java        # @RabbitListener on payment.queue
-│   └── RideStatusListener.java              # @RabbitListener on ride.status.queue
+│   ├── RideStatusEventListener.java     # @RabbitListener on ride.status.queue
+│   └── PaymentEventListener.java        # @RabbitListener on payment.queue
 ├── model/
-│   ├── Notification.java                    # MongoDB document entity
-│   └── NotificationType.java               # Enum for notification categories
+│   ├── Notification.java                # MongoDB document entity
+│   ├── NotificationType.java            # Notification type enum
+│   ├── RideStatus.java                  # Local mirror of ride-service's RideStatus
+│   └── PaymentStatus.java               # Local mirror of payment-service's PaymentStatus
 ├── repository/
-│   └── NotificationRepository.java          # MongoDB queries
+│   └── NotificationRepository.java      # MongoDB queries
 └── service/
-    └── NotificationService.java             # Business logic for create, query, mark-read
+    └── NotificationService.java         # Business logic
 ```
 
 ## Key Design Decisions
 
-1. **DTOs for request/response separation:** Controllers return `NotificationResponse` and never expose the `Notification` entity directly.
+1. **No shared domain classes across services:** `RideStatusChangedEvent`, `RideStatus`, `PaymentCompletedEvent`, and `PaymentStatus` are defined locally in notification-service rather than importing ride-service's or payment-service's versions. Microservices should not share compiled Java types across module boundaries — Jackson deserializes purely by field name and enum constant name, so a structurally identical local copy is sufficient and keeps the services independently deployable.
 
-2. **String-typed event fields:** The consumer-side event DTOs use `String` for fields like `status` instead of importing the publisher's enum classes (e.g., `RideStatus`, `PaymentStatus`). This avoids a compile-time coupling between microservices — the notification service can deserialize events regardless of enum changes in ride-service or payment-service.
+2. **Consumer-only RabbitMQ config:** Unlike ride-service and payment-service, `RabbitMQConfig` here declares no `RabbitTemplate` bean — this service never publishes, only consumes.
 
-3. **Dual notification on ride events:** When a ride status changes and a driver is assigned (`driverId != null`), the listener creates two separate notification records — one for the rider and one for the driver — each with a role-appropriate message.
+3. **Explicit `@Bean` method calls for bindings:** `rideStatusBinding()` and `paymentBinding()` call `rideStatusQueue()` / `paymentQueue()` directly rather than taking them as method parameters. With two `Queue` beans declared in the same `@Configuration` class, parameter-based autowiring is ambiguous unless the compiler's `-parameters` flag preserves parameter names for Spring to match against. Calling the bean methods directly (safe under Spring's CGLIB proxying, which returns the singleton) removes that fragility entirely.
 
-4. **Payment notification for rider only:** The `payment.completed` event creates a notification for the rider confirming the amount. Driver payment notification is a future TODO (see AGENTS.md TODO #6).
+4. **Fire-and-forget message construction:** For `ride.status.changed`, the listener reuses the human-readable `message` string ride-service already built rather than reconstructing it from `status`. For `payment.completed`, which carries no message field, the listener builds its own text from `amount`.
 
-5. **Consumer-side queue declaration:** `RabbitMQConfig` declares both `ride.status.queue` and `payment.queue` with their bindings to `uber.exchange`. This is idempotent — RabbitMQ will not create duplicate queues if the publisher services have already declared them.
-
-6. **JSON deserialization via listener container factory:** A `SimpleRabbitListenerContainerFactory` is explicitly configured with `JacksonJsonMessageConverter` so that `@RabbitListener` methods automatically deserialize JSON message bodies into the corresponding event DTOs.
-
-7. **No SecurityConfig:** Like other services, the Notification Service trusts the API Gateway's `AuthenticationFilter` for authentication and has no `spring-boot-starter-security` dependency.
+5. **`status` still drives the notification `type`:** Even though the raw event message is reused as-is, `RideStatusEventListener` maps the ride's `RideStatus` to the corresponding `NotificationType` (e.g. `IN_PROGRESS` → `RIDE_STARTED`) so notifications remain filterable/typed on the read side.
 
 ## What Remains / Stubs
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Driver payment notification | **Not Implemented** | `payment.completed` events currently only notify the rider. The driver needs to be notified too (requires `driverId` on the event — see AGENTS.md TODO #6). |
-| Notification delivery | **Stored only** | Notifications are saved to MongoDB and served via REST. No push/WebSocket/SSE delivery exists. |
-| Bulk mark-as-read | **Not Implemented** | Only single-notification mark-as-read exists. A bulk endpoint may be useful for the frontend. |
+| Push/SMS/Email delivery | **Not Implemented** | Per `docs/report.md` §5.3.5, this service only persists and exposes notifications ("simulates delivery"). Real delivery channels are out of scope. |
+| Retry/dead-letter handling | **Not Implemented** | If `NotificationService.createNotification` throws (e.g. Mongo unavailable), the message is currently just nacked/requeued by default Spring AMQP behavior — no dead-letter queue is configured. |
+| Input Validation | **Basic only** | No `@Valid` / `@NotBlank` annotations on incoming event fields; a malformed event would surface as a listener exception rather than a clean validation error. |
+| Pagination | **Not Implemented** | `GET /api/notifications/user/{userId}` returns the full list; no `page`/`size` params. |
+| `userId` index | **Not Implemented** | `NotificationRepository` queries by `userId` without an explicit `@Indexed` annotation on the field. |
 
 ## How to Test
+1. Start `eureka-server` (required for registry).
+2. Start `api-gateway` (required for routing).
+3. Start `user-service` (required to register a test user).
+4. Start RabbitMQ (`docker compose up -d` from the project root).
+5. Start `notification-service`.
+6. Open `requests/notification_api-gateway.http` in IntelliJ and run the requests sequentially — this covers registration, empty-list retrieval, and the 404 case for marking a non-existent notification as read.
+7. To exercise the actual event-consumption path, either run a full ride through `ride-service`, or publish a test message manually via the RabbitMQ management UI (`http://localhost:15672`, `guest`/`guest`) to the `uber.exchange` exchange with routing key `ride.status.changed` or `payment.completed` — see the comment block at the top of `requests/notification.http` for a sample payload.
 
-1. Start `eureka-server`, `rabbitmq` (on `localhost:5672`), and `notification-service`.
-2. Start `ride-service` and `payment-service` (the event publishers).
-3. Trigger a ride lifecycle (request → match → start → complete) and a payment.
-4. Open `requests/notification.http` in IntelliJ and run the requests to verify notifications were created.
-5. Replace `{{riderId}}` and `{{driverId}}` with actual user IDs from the test flow.
+> **Note:** Because this service has no REST create endpoint, `requests/notification.http` and `requests/notification_api-gateway.http` can only fully exercise the mark-as-read and non-empty-list paths after a real event has been consumed.

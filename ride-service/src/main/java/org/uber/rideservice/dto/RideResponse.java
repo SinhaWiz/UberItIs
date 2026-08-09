@@ -17,7 +17,6 @@ public class RideResponse {
     private String id;
     private String riderId;
     private String driverId;
-    private String pendingDriverId;
     private String pickupLocation;
     private String dropoffLocation;
     private Double pickupLat;
@@ -27,7 +26,6 @@ public class RideResponse {
     private RideStatus status;
     private Double fareEstimate;
     private Double finalFare;
-    private Boolean isPaid;
     private LocalDateTime requestedAt;
     private LocalDateTime matchedAt;
     private LocalDateTime startedAt;
