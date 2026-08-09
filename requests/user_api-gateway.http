@@ -49,7 +49,27 @@ Content-Type: application/json
 
 ###
 
-### 3. Get user by ID (Secured Endpoint - Requires JWT)
+### 3. Register duplicate phone (Open Endpoint - Should fail with 409)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Duplicate Phone Gateway",
+  "email": "duplicate.phone.gateway@example.com",
+  "password": "securePass123",
+  "phone": "+8801755555555",
+  "role": "RIDER"
+}
+
+> {%
+    client.test("Duplicate phone rejected", function() {
+        client.assert(response.status === 409, "Expected 409 Conflict");
+    });
+%}
+
+###
+
+### 4. Get user by ID (Secured Endpoint - Requires JWT)
 ### The Gateway validates the token and injects X-Auth-User-Id header before forwarding
 GET http://localhost:8080/api/users/{{riderId}}
 Authorization: Bearer {{authToken}}
@@ -62,7 +82,7 @@ Authorization: Bearer {{authToken}}
 
 ###
 
-### 4. Try secured endpoint WITHOUT token (Should fail with 401 Unauthorized)
+### 5. Try secured endpoint WITHOUT token (Should fail with 401 Unauthorized)
 GET http://localhost:8080/api/users/{{riderId}}
 
 > {%
@@ -73,7 +93,7 @@ GET http://localhost:8080/api/users/{{riderId}}
 
 ###
 
-### 5. Try secured endpoint WITH INVALID token (Should fail with 401 Unauthorized)
+### 6. Try secured endpoint WITH INVALID token (Should fail with 401 Unauthorized)
 GET http://localhost:8080/api/users/{{riderId}}
 Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.fakeclaims.fakesignature
 
@@ -85,7 +105,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.fakeclaims.fakesignature
 
 ###
 
-### 6. Update user profile (Secured Endpoint)
+### 7. Update user profile (Secured Endpoint)
 PUT http://localhost:8080/api/users/{{riderId}}
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
@@ -103,7 +123,7 @@ Content-Type: application/json
 
 ###
 
-### 7. Get all users (Secured Endpoint)
+### 8. Get all users (Secured Endpoint)
 GET http://localhost:8080/api/users
 Authorization: Bearer {{authToken}}
 
