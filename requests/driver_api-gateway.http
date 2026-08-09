@@ -67,7 +67,30 @@ Content-Type: application/json
 
 ###
 
-### 4. Create a driver profile for the registered driver user (via Gateway)
+### 4. Register another Driver user (for duplicate plate tests, via Gateway)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Charlie GW Driver",
+  "email": "charlie.gw@example.com",
+  "password": "driverPass789",
+  "phone": "+8801766666666",
+  "role": "DRIVER"
+}
+
+> {%
+    client.test("Second driver user registration successful", function() {
+        client.assert(response.status === 201 || response.status === 409, "Expected 201 Created or 409 Conflict");
+    });
+    if (response.status === 201) {
+        client.global.set("secondDriverUserId", response.body.id);
+    }
+%}
+
+###
+
+### 5. Create a driver profile for the registered driver user (via Gateway)
 POST http://localhost:8080/api/drivers/profile
 Authorization: Bearer {{driverAuthToken}}
 Content-Type: application/json
@@ -90,7 +113,7 @@ Content-Type: application/json
 
 ###
 
-### 5. Try creating duplicate profile (should fail with 409, via Gateway)
+### 6. Try creating duplicate profile (should fail with 409, via Gateway)
 POST http://localhost:8080/api/drivers/profile
 Authorization: Bearer {{driverAuthToken}}
 Content-Type: application/json
@@ -110,7 +133,27 @@ Content-Type: application/json
 
 ###
 
-### 6. Try creating profile with non-existent userId (should fail with 404, via Gateway)
+### 7. Try creating duplicate vehicle plate for another driver (should fail with 409, via Gateway)
+POST http://localhost:8080/api/drivers/profile
+Authorization: Bearer {{driverAuthToken}}
+Content-Type: application/json
+
+{
+  "userId": "{{secondDriverUserId}}",
+  "vehicleModel": "Honda Civic",
+  "vehiclePlate": "DHA-GW-1234",
+  "vehicleColor": "Black"
+}
+
+> {%
+    client.test("Duplicate vehicle plate rejected", function() {
+        client.assert(response.status === 409, "Expected 409 Conflict");
+    });
+%}
+
+###
+
+### 8. Try creating profile with non-existent userId (should fail with 404, via Gateway)
 POST http://localhost:8080/api/drivers/profile
 Authorization: Bearer {{driverAuthToken}}
 Content-Type: application/json
@@ -130,7 +173,7 @@ Content-Type: application/json
 
 ###
 
-### 7. Get driver profile by userId (via Gateway)
+### 9. Get driver profile by userId (via Gateway)
 GET http://localhost:8080/api/drivers/{{driverUserId}}
 Authorization: Bearer {{driverAuthToken}}
 
@@ -143,7 +186,7 @@ Authorization: Bearer {{driverAuthToken}}
 
 ###
 
-### 8. Update driver profile vehicle info (via Gateway)
+### 10. Update driver profile vehicle info (via Gateway)
 PUT http://localhost:8080/api/drivers/{{driverUserId}}
 Authorization: Bearer {{driverAuthToken}}
 Content-Type: application/json
@@ -162,7 +205,7 @@ Content-Type: application/json
 
 ###
 
-### 9. Toggle availability to offline (via Gateway)
+### 11. Toggle availability to offline (via Gateway)
 PUT http://localhost:8080/api/drivers/{{driverUserId}}/availability
 Authorization: Bearer {{driverAuthToken}}
 Content-Type: application/json
@@ -180,7 +223,7 @@ Content-Type: application/json
 
 ###
 
-### 10. Get available drivers (should be empty after toggle, via Gateway)
+### 12. Get available drivers (should be empty after toggle, via Gateway)
 GET http://localhost:8080/api/drivers/available
 Authorization: Bearer {{driverAuthToken}}
 
@@ -193,7 +236,7 @@ Authorization: Bearer {{driverAuthToken}}
 
 ###
 
-### 11. Toggle availability back to online (via Gateway)
+### 13. Toggle availability back to online (via Gateway)
 PUT http://localhost:8080/api/drivers/{{driverUserId}}/availability
 Authorization: Bearer {{driverAuthToken}}
 Content-Type: application/json
@@ -211,7 +254,7 @@ Content-Type: application/json
 
 ###
 
-### 12. Update driver location (via Gateway)
+### 14. Update driver location (via Gateway)
 PUT http://localhost:8080/api/drivers/{{driverUserId}}/location
 Authorization: Bearer {{driverAuthToken}}
 Content-Type: application/json
@@ -230,7 +273,7 @@ Content-Type: application/json
 
 ###
 
-### 13. Get all available drivers (should include our driver, via Gateway)
+### 15. Get all available drivers (should include our driver, via Gateway)
 GET http://localhost:8080/api/drivers/available
 Authorization: Bearer {{driverAuthToken}}
 
@@ -243,7 +286,7 @@ Authorization: Bearer {{driverAuthToken}}
 
 ###
 
-### 14. Get nearby drivers within 5km of the driver's location (via Gateway)
+### 16. Get nearby drivers within 5km of the driver's location (via Gateway)
 GET http://localhost:8080/api/drivers/nearby?lat=23.777176&lng=90.399452&radius=5
 Authorization: Bearer {{driverAuthToken}}
 
@@ -256,7 +299,7 @@ Authorization: Bearer {{driverAuthToken}}
 
 ###
 
-### 15. Get nearby drivers far away (should be empty, via Gateway)
+### 17. Get nearby drivers far away (should be empty, via Gateway)
 GET http://localhost:8080/api/drivers/nearby?lat=40.712776&lng=-74.005974&radius=1
 Authorization: Bearer {{driverAuthToken}}
 
@@ -269,7 +312,7 @@ Authorization: Bearer {{driverAuthToken}}
 
 ###
 
-### 16. Get non-existent profile (should fail with 404, via Gateway)
+### 18. Get non-existent profile (should fail with 404, via Gateway)
 GET http://localhost:8080/api/drivers/nonexistentUserId
 Authorization: Bearer {{driverAuthToken}}
 

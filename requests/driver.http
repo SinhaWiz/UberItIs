@@ -42,7 +42,26 @@ Content-Type: application/json
     client.global.set("riderUserId", response.body.id);
 %}
 
-### 3. Create a driver profile for the registered driver user
+### 3. Register another Driver user (for duplicate plate tests)
+POST http://localhost:8081/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Charlie Hasan",
+  "email": "charlie.driver@example.com",
+  "password": "driverPass789",
+  "phone": "+8801766666666",
+  "role": "DRIVER"
+}
+
+> {%
+    client.test("Second driver user registration successful", function() {
+        client.assert(response.status === 201, "Expected 201 Created");
+    });
+    client.global.set("secondDriverUserId", response.body.id);
+%}
+
+### 4. Create a driver profile for the registered driver user
 POST http://localhost:8083/api/drivers/profile
 Content-Type: application/json
 
@@ -61,7 +80,7 @@ Content-Type: application/json
     client.global.set("driverProfileId", response.body.id);
 %}
 
-### 4. Try creating duplicate profile (should fail with 409)
+### 5. Try creating duplicate profile (should fail with 409)
 POST http://localhost:8083/api/drivers/profile
 Content-Type: application/json
 
@@ -78,7 +97,24 @@ Content-Type: application/json
     });
 %}
 
-### 5. Try creating profile with non-existent userId (should fail with 404)
+### 6. Try creating duplicate vehicle plate for another driver (should fail with 409)
+POST http://localhost:8083/api/drivers/profile
+Content-Type: application/json
+
+{
+  "userId": "{{secondDriverUserId}}",
+  "vehicleModel": "Honda Civic",
+  "vehiclePlate": "DHA-1234",
+  "vehicleColor": "Black"
+}
+
+> {%
+    client.test("Duplicate vehicle plate rejected", function() {
+        client.assert(response.status === 409, "Expected 409 Conflict");
+    });
+%}
+
+### 7. Try creating profile with non-existent userId (should fail with 404)
 POST http://localhost:8083/api/drivers/profile
 Content-Type: application/json
 
@@ -95,7 +131,7 @@ Content-Type: application/json
     });
 %}
 
-### 6. Get driver profile by userId
+### 8. Get driver profile by userId
 GET http://localhost:8083/api/drivers/{{driverUserId}}
 
 > {%
@@ -105,7 +141,7 @@ GET http://localhost:8083/api/drivers/{{driverUserId}}
     });
 %}
 
-### 7. Update driver profile vehicle info
+### 9. Update driver profile vehicle info
 PUT http://localhost:8083/api/drivers/{{driverUserId}}
 Content-Type: application/json
 
@@ -121,7 +157,7 @@ Content-Type: application/json
     });
 %}
 
-### 8. Toggle availability to offline
+### 10. Toggle availability to offline
 PUT http://localhost:8083/api/drivers/{{driverUserId}}/availability
 Content-Type: application/json
 
@@ -136,7 +172,7 @@ Content-Type: application/json
     });
 %}
 
-### 9. Get available drivers (should be empty after toggle)
+### 11. Get available drivers (should be empty after toggle)
 GET http://localhost:8083/api/drivers/available
 
 > {%
@@ -146,7 +182,7 @@ GET http://localhost:8083/api/drivers/available
     });
 %}
 
-### 10. Toggle availability back to online
+### 12. Toggle availability back to online
 PUT http://localhost:8083/api/drivers/{{driverUserId}}/availability
 Content-Type: application/json
 
@@ -161,7 +197,7 @@ Content-Type: application/json
     });
 %}
 
-### 11. Update driver location
+### 13. Update driver location
 PUT http://localhost:8083/api/drivers/{{driverUserId}}/location
 Content-Type: application/json
 
@@ -177,7 +213,7 @@ Content-Type: application/json
     });
 %}
 
-### 12. Get all available drivers (should include our driver)
+### 14. Get all available drivers (should include our driver)
 GET http://localhost:8083/api/drivers/available
 
 > {%
@@ -187,7 +223,7 @@ GET http://localhost:8083/api/drivers/available
     });
 %}
 
-### 13. Get nearby drivers within 5km of the driver's location
+### 15. Get nearby drivers within 5km of the driver's location
 GET http://localhost:8083/api/drivers/nearby?lat=23.777176&lng=90.399452&radius=5
 
 > {%
@@ -197,7 +233,7 @@ GET http://localhost:8083/api/drivers/nearby?lat=23.777176&lng=90.399452&radius=
     });
 %}
 
-### 14. Get nearby drivers far away (should be empty)
+### 16. Get nearby drivers far away (should be empty)
 GET http://localhost:8083/api/drivers/nearby?lat=40.712776&lng=-74.005974&radius=1
 
 > {%
@@ -207,7 +243,7 @@ GET http://localhost:8083/api/drivers/nearby?lat=40.712776&lng=-74.005974&radius
     });
 %}
 
-### 15. Get non-existent profile (should fail with 404)
+### 17. Get non-existent profile (should fail with 404)
 GET http://localhost:8083/api/drivers/nonexistentUserId
 
 > {%
