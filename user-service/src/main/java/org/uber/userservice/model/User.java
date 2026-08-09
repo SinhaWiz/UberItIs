@@ -28,6 +28,7 @@ public class User {
 
     private String password;
 
+    @Indexed(unique = true)
     private String phone;
 
     @Builder.Default
